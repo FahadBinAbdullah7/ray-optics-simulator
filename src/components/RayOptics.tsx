@@ -492,20 +492,29 @@ export default function RayOptics({ hideNav = false }: { hideNav?: boolean }) {
       };
       tri(cx, top, true); tri(cx, bot, false);
     } else {
-      ctx.strokeStyle = "rgba(180,220,255,0.9)";
-      ctx.lineWidth = 3;
+      const bulge = mode === "concaveMirror" ? 20 : -20;
+      const cpBulge = bulge * 2; // Control point for quadratic curve
+      
+      // Draw the reflective surface
       ctx.beginPath();
-      const bulge = mode === "concaveMirror" ? 16 : -16;
       ctx.moveTo(cx, top);
-      ctx.quadraticCurveTo(cx + bulge, cy, cx, bot);
+      ctx.quadraticCurveTo(cx + cpBulge, cy, cx, bot);
       ctx.stroke();
-      ctx.strokeStyle = "rgba(180,220,255,0.35)";
-      ctx.lineWidth = 1;
-      const back = mode === "concaveMirror" ? 1 : -1;
-      for (let yy = top; yy < bot; yy += 8) {
+
+      // Draw the silvered (covered) side markings
+      ctx.strokeStyle = "rgba(180,220,255,0.4)";
+      ctx.lineWidth = 1.5;
+      const step = 8;
+      for (let yy = top; yy <= bot; yy += step) {
+        // Calculate the x-coordinate on the curve at this y
+        const t = (yy - top) / (bot - top);
+        // Quadratic curve formula: (1-t)^2*P0 + 2(1-t)t*P1 + t^2*P2
+        const curveX = Math.pow(1 - t, 2) * cx + 2 * (1 - t) * t * (cx + cpBulge) + Math.pow(t, 2) * cx;
+        
         ctx.beginPath();
-        ctx.moveTo(cx, yy);
-        ctx.lineTo(cx + back * 7, yy + 4);
+        ctx.moveTo(curveX, yy);
+        // The silvered marks always point to the right for both mirrors (facing left)
+        ctx.lineTo(curveX + 8, yy + 4);
         ctx.stroke();
       }
     }
