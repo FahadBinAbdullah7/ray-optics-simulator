@@ -493,12 +493,13 @@ export default function RayOptics({ hideNav = false }: { hideNav?: boolean }) {
       tri(cx, top, true); tri(cx, bot, false);
     } else {
       const bulge = mode === "concaveMirror" ? 20 : -20;
-      const cpBulge = bulge * 2; // Control point for quadratic curve
+      const cpBulge = bulge * 2; // Control point relative shift
       
       // Draw the reflective surface
+      // We shift the mirror so its vertex (center) is at cx, where rays reflect
       ctx.beginPath();
-      ctx.moveTo(cx, top);
-      ctx.quadraticCurveTo(cx + cpBulge, cy, cx, bot);
+      ctx.moveTo(cx - bulge, top);
+      ctx.quadraticCurveTo(cx + bulge, cy, cx - bulge, bot);
       ctx.stroke();
 
       // Draw the silvered (covered) side markings
@@ -506,14 +507,12 @@ export default function RayOptics({ hideNav = false }: { hideNav?: boolean }) {
       ctx.lineWidth = 1.5;
       const step = 8;
       for (let yy = top; yy <= bot; yy += step) {
-        // Calculate the x-coordinate on the curve at this y
         const t = (yy - top) / (bot - top);
-        // Quadratic curve formula: (1-t)^2*P0 + 2(1-t)t*P1 + t^2*P2
-        const curveX = Math.pow(1 - t, 2) * cx + 2 * (1 - t) * t * (cx + cpBulge) + Math.pow(t, 2) * cx;
+        // Calculate curveX so it matches the shifted quadratic curve
+        const curveX = cx - bulge * Math.pow(1 - 2 * t, 2);
         
         ctx.beginPath();
         ctx.moveTo(curveX, yy);
-        // The silvered marks always point to the right for both mirrors (facing left)
         ctx.lineTo(curveX + 8, yy + 4);
         ctx.stroke();
       }
