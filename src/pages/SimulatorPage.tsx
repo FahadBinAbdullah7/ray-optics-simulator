@@ -71,10 +71,12 @@ const SimulatorPage = () => {
   const type = typeParam || (location.pathname.includes("refraction") ? "refraction" : "lens-mirror");
 
   const handleTypeChange = (newType: string) => {
-    const params = new URLSearchParams(searchParams);
+    // Start fresh — don't carry over params from the other experiment type
+    const params = new URLSearchParams();
     params.set("type", newType);
     if (newType === "refraction") {
       params.set("mode", "slab");
+      params.set("t", "45");
     } else {
       params.set("mode", "convexLens");
     }
