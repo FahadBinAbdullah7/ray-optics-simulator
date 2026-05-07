@@ -4,6 +4,7 @@ import RayOptics from "@/components/RayOptics";
 import Refraction from "./Refraction";
 import { Sparkles, GraduationCap, Zap, Play, X, ChevronRight, Navigation } from "lucide-react";
 import { GuidedTour, TourStep } from "@/components/GuidedTour";
+
 const LENS_MIRROR_TOUR: TourStep[] = [
   { selector: ".tabs", title: "অপটিক্যাল উপাদান", desc: "চার ধরনের উপাদান আছে — উত্তল লেন্স, অবতল লেন্স, উত্তল দর্পণ ও অবতল দর্পণ। যেকোনো একটি ক্লিক করুন।", waitForClick: true },
   { selector: ".canvas-wrap", title: "সিমুলেশন ক্যানভাস", desc: "এখানে রশ্মি চিত্র দেখা যাবে। মোমবাতিটি ধরে যেকোনো দিকে টেনে সরাতে পারবেন।" },
@@ -16,6 +17,7 @@ const LENS_MIRROR_TOUR: TourStep[] = [
   { selector: "#use-case-section", title: "ব্যবহারের উদাহরণ", desc: "এখানে বিভিন্ন বাস্তব ব্যবহারের অ্যানিমেশন দেখা যাবে। যেকোনো কার্ডে ক্লিক করুন।" },
   { selector: ".lab-test-btn", title: "ল্যাব টেস্ট", desc: "৫টি কুইজে অংশ নিয়ে পয়েন্ট অর্জন করুন এবং আপনার বোঝাপড়া যাচাই করুন!" },
 ];
+
 const REFRACTION_TOUR: TourStep[] = [
   { selector: "#ref-tabs", title: "পরীক্ষা নির্বাচন", desc: "তিনটি পরীক্ষা আছে: কাঁচের স্ল্যাব, প্রিজম (বিচ্ছুরণ) এবং পানিতে লাঠি। যেকোনো একটি ট্যাবে ক্লিক করুন।", waitForClick: true },
   { selector: ".canvas-wrap", title: "সিমুলেশন ক্যানভাস", desc: "এখানে আলোর প্রতিসরণের চিত্র দেখা যাবে। কোণ ও মান পরিবর্তন করলে চিত্র সাথে সাথে আপডেট হয়।" },
@@ -24,6 +26,7 @@ const REFRACTION_TOUR: TourStep[] = [
   { selector: ".slider-row", title: "স্লাইডার", desc: "এই স্লাইডারগুলো টেনে কোণ ও প্রতিসরণ সূচক পরিবর্তন করুন — চিত্র সাথে সাথে আপডেট হবে।" },
   { selector: ".formula-card", title: "সূত্র ও গণনা", desc: "এখানে স্নেলের সূত্র এবং বর্তমান মানগুলো দিয়ে গণনা দেখা যাবে: n₁ sin θ₁ = n₂ sin θ₂" },
 ];
+
 const PRESETS = [
   {
     title: "উত্তল লেন্সের প্রতিবিম্ব",
@@ -54,6 +57,7 @@ const PRESETS = [
     params: { n: "1.33" }
   }
 ];
+
 const SimulatorPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
@@ -65,6 +69,7 @@ const SimulatorPage = () => {
   // Determine type from search param OR pathname
   const typeParam = searchParams.get("type");
   const type = typeParam || (location.pathname.includes("refraction") ? "refraction" : "lens-mirror");
+
   const handleTypeChange = (newType: string) => {
     const params = new URLSearchParams(searchParams);
     params.set("type", newType);
@@ -75,6 +80,7 @@ const SimulatorPage = () => {
     }
     setSearchParams(params);
   };
+
   const closeIntro = () => {
     setIsExiting(true);
     setTimeout(() => {
@@ -82,6 +88,7 @@ const SimulatorPage = () => {
       setIsExiting(false);
     }, 400);
   };
+
   const loadPreset = (p: typeof PRESETS[0]) => {
     const params = new URLSearchParams();
     params.set("type", p.type);
@@ -91,6 +98,7 @@ const SimulatorPage = () => {
     setPresetKey(k => k + 1); // Force remount so fresh mode is read from URL
     closeIntro();
   };
+
   return (
     <div className="simulator-page-root">
       <style>{`
@@ -143,6 +151,7 @@ const SimulatorPage = () => {
           border-color: #E8001D;
           box-shadow: 0 4px 12px rgba(232, 0, 29, 0.25);
         }
+
         /* Intro Overlay */
         .intro-overlay {
           position: fixed;
@@ -210,6 +219,7 @@ const SimulatorPage = () => {
         }
         .feature-text h4 { font-weight: 700; font-size: 14px; margin-bottom: 2px; }
         .feature-text p { font-size: 12px; color: #6B7280; line-height: 1.4; }
+
         .presets-title { font-weight: 800; font-size: 18px; margin-bottom: 12px; color: #111827; }
         .presets-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
         @media (min-width: 480px) { .presets-grid { grid-template-columns: 1fr 1fr; } }
@@ -221,18 +231,21 @@ const SimulatorPage = () => {
         .preset-btn:hover { border-color: #E8001D; background: #FFF5F6; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(232, 0, 29, 0.1); }
         .preset-name { font-weight: 700; font-size: 14px; color: #111827; }
         .preset-desc { font-size: 12px; color: #6B7280; }
+
         .start-btn {
           width: 100%; margin-top: 24px; padding: 16px;
           background: #E8001D; color: #fff; border: none; border-radius: 16px;
           font-weight: 800; font-size: 16px; cursor: pointer;
           display: flex; align-items: center; justify-content: center; gap: 8px;
         }
+
         @media (max-width: 480px) {
           .simulator-page-root { padding: 12px 8px; }
           .main-tab-btn { font-size: 14px; padding: 10px 8px; }
           .intro-title { font-size: 24px; }
         }
       `}</style>
+
       {showIntro && (
         <div className={`intro-overlay ${isExiting ? 'exiting' : ''}`}>
           <div className="intro-card">
@@ -273,6 +286,7 @@ const SimulatorPage = () => {
                   </div>
                 </div>
               </div>
+
               <div className="presets-title">দ্রুত শুরু করুন (Presets)</div>
               <div className="presets-grid">
                 {PRESETS.map((p, i) => (
@@ -282,6 +296,7 @@ const SimulatorPage = () => {
                   </button>
                 ))}
               </div>
+
               <button className="start-btn" onClick={closeIntro}>
                 সরাসরি সিমুলেশন শুরু করি <ChevronRight size={20}/>
               </button>
@@ -289,6 +304,7 @@ const SimulatorPage = () => {
           </div>
         </div>
       )}
+
       <header className="central-header" style={{ position: 'relative' }}>
         {/* Centered branding */}
         <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -320,6 +336,7 @@ const SimulatorPage = () => {
           Tutorial
         </button>
       </header>
+
       <div className="main-nav-container">
         <div className="main-tabs">
           <button 
@@ -336,6 +353,7 @@ const SimulatorPage = () => {
           </button>
         </div>
       </div>
+
       <div className="simulator-content">
         {type === "refraction" ? (
           <Refraction key={`refraction-${presetKey}`} hideNav />
@@ -343,6 +361,7 @@ const SimulatorPage = () => {
           <RayOptics key={`rayoptics-${presetKey}`} hideNav />
         )}
       </div>
+
       <GuidedTour
         steps={type === "refraction" ? REFRACTION_TOUR : LENS_MIRROR_TOUR}
         started={tourActive}
@@ -351,4 +370,5 @@ const SimulatorPage = () => {
     </div>
   );
 };
+
 export default SimulatorPage;
