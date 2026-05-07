@@ -233,7 +233,8 @@ export default function RayOptics({ hideNav = false }: { hideNav?: boolean }) {
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryMode = searchParams.get("mode") as Mode;
-  const initialMode: Mode = queryMode && Object.values(PATH_TO_MODE).includes(queryMode)
+  const validModes = Object.keys(MODE_TO_PATH) as Mode[];
+  const initialMode: Mode = queryMode && validModes.includes(queryMode)
     ? queryMode
     : (PATH_TO_MODE[location.pathname] ?? "convexLens");
   const [mode, setMode] = useState<Mode>(initialMode);
