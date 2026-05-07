@@ -1036,14 +1036,57 @@ const Refraction = ({ hideNav = false }: { hideNav?: boolean }) => {
       ctx.fillText("পর্যবেক্ষক", eyeX - 28, eyeY + eyeRy + 14);
       ctx.restore();
 
-      // Labels
+      // Legend box — top-left corner, color-coded line samples
       ctx.save();
-      ctx.font = "12px 'Hind Siliguri', sans-serif";
-      ctx.fillStyle = "rgba(224,164,92,1)";
-      ctx.fillText("আপাত অবস্থান", apparentEndX - 40, apparentEndY + 22);
-      ctx.fillStyle = "rgba(201,139,75,0.85)";
-      ctx.fillText("প্রকৃত অবস্থান", realEndX - 40, realEndY + 22);
-      ctx.fillStyle = "rgba(255,230,120,0.95)";
+      const fontSize = Math.max(10, Math.round(12 * drawScale));
+      ctx.font = `${fontSize}px 'Hind Siliguri', sans-serif`;
+      const lineLen = Math.max(18, 24 * drawScale);
+      const pad = 8;
+      const rowH = fontSize + 10;
+      const legendLabelW = ctx.measureText("আপাত অবস্থান").width;
+      const legendW = pad + lineLen + 6 + legendLabelW + pad;
+      const legendH = pad + rowH * 2 + pad * 0.5;
+      const lx = 12;
+      const ly = 12;
+      // Background
+      ctx.fillStyle = "rgba(0,0,0,0.52)";
+      ctx.beginPath();
+      if ((ctx as unknown as {roundRect?: unknown}).roundRect)
+        (ctx as unknown as {roundRect:(x:number,y:number,w:number,h:number,r:number)=>void})
+          .roundRect(lx, ly, legendW, legendH, 7);
+      else ctx.rect(lx, ly, legendW, legendH);
+      ctx.fill();
+      ctx.textBaseline = "middle";
+      // Row 1 — apparent position (solid orange)
+      const r1y = ly + pad + rowH * 0.5 - 1;
+      ctx.strokeStyle = "#E0A45C";
+      ctx.lineWidth = Math.max(2, 3 * drawScale);
+      ctx.setLineDash([]);
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(lx + pad, r1y);
+      ctx.lineTo(lx + pad + lineLen, r1y);
+      ctx.stroke();
+      ctx.fillStyle = "#E0A45C";
+      ctx.fillText("আপাত অবস্থান", lx + pad + lineLen + 6, r1y);
+      // Row 2 — real position (dashed brown)
+      const r2y = ly + pad + rowH * 1.5 - 1;
+      ctx.strokeStyle = "rgba(201,139,75,0.9)";
+      ctx.lineWidth = Math.max(2, 3 * drawScale);
+      ctx.setLineDash([5, 5]);
+      ctx.beginPath();
+      ctx.moveTo(lx + pad, r2y);
+      ctx.lineTo(lx + pad + lineLen, r2y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = "rgba(220,160,95,1)";
+      ctx.fillText("প্রকৃত অবস্থান", lx + pad + lineLen + 6, r2y);
+      ctx.textBaseline = "alphabetic";
+      ctx.restore();
+      // Light ray label along the ray path
+      ctx.save();
+      ctx.font = `${Math.max(10, Math.round(11 * drawScale))}px 'Hind Siliguri', sans-serif`;
+      ctx.fillStyle = "rgba(255,230,120,0.92)";
       ctx.fillText("আলোর পথ", (refractX + eyeX) / 2 - 30, (refractY + eyeY) / 2 - 6);
       ctx.restore();
     };
