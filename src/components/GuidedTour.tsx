@@ -1,20 +1,24 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
+
 export interface TourStep {
   selector: string;
   title: string;
   desc: string;
   waitForClick?: boolean;
 }
+
 interface GuidedTourProps {
   steps: TourStep[];
   started: boolean;
   onEnd: () => void;
 }
+
 export function GuidedTour({ steps, started, onEnd }: GuidedTourProps) {
   const [step, setStep] = useState(0);
   const [rect, setRect] = useState<DOMRect | null>(null);
   const prevElRef = useRef<HTMLElement | null>(null);
+
   const elevateEl = useCallback((el: HTMLElement | null) => {
     if (prevElRef.current) {
       prevElRef.current.style.removeProperty("position");
@@ -30,14 +34,17 @@ export function GuidedTour({ steps, started, onEnd }: GuidedTourProps) {
       prevElRef.current = el;
     }
   }, []);
+
   const endTour = useCallback(() => {
     elevateEl(null);
     onEnd();
   }, [elevateEl, onEnd]);
+
   const goNext = useCallback(() => {
     if (step < steps.length - 1) setStep(s => s + 1);
     else endTour();
   }, [step, steps.length, endTour]);
+
   const measure = useCallback((selector: string) => {
     const el = document.querySelector(selector) as HTMLElement | null;
     if (!el) { setRect(null); elevateEl(null); return; }
@@ -51,10 +58,12 @@ export function GuidedTour({ steps, started, onEnd }: GuidedTourProps) {
     setTimeout(doMeasure, 400);
     setTimeout(doMeasure, 700);
   }, [elevateEl]);
+
   useEffect(() => {
     if (!started) { setStep(0); setRect(null); elevateEl(null); return; }
     measure(steps[step]?.selector ?? "");
   }, [started, step, steps, measure, elevateEl]);
+
   useEffect(() => {
     if (!started) return;
     const update = () => {
@@ -65,6 +74,7 @@ export function GuidedTour({ steps, started, onEnd }: GuidedTourProps) {
     window.addEventListener("scroll", update, true);
     return () => { window.removeEventListener("resize", update); window.removeEventListener("scroll", update, true); };
   }, [started, step, steps]);
+
   useEffect(() => {
     if (!started || !steps[step]?.waitForClick) return;
     const el = document.querySelector(steps[step].selector);
@@ -73,12 +83,16 @@ export function GuidedTour({ steps, started, onEnd }: GuidedTourProps) {
     el.addEventListener("click", handler, { once: true, capture: true });
     return () => el.removeEventListener("click", handler, true);
   }, [started, step, steps, goNext]);
+
   useEffect(() => { return () => elevateEl(null); }, [elevateEl]);
+
   if (!started) return null;
+
   const current = steps[step];
   const interactive = !!current.waitForClick;
   const PAD = 8;
   const accent = "#1d4ed8";
+
   const getCardPos = (): React.CSSProperties => {
     const cw = Math.min(280, window.innerWidth - 24);
     const CH = 200;
@@ -92,11 +106,14 @@ export function GuidedTour({ steps, started, onEnd }: GuidedTourProps) {
     left = Math.max(12, Math.min(left, vw - cw - 12));
     return { position: "fixed", top: `${top}px`, left: `${left}px`, width: `${cw}px` };
   };
+
   return (
     <>
       <style>{`@keyframes _tIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}`}</style>
+
       {/* Backdrop */}
       <div onClick={endTour} style={{ position:"fixed", inset:0, zIndex:9000, background:"rgba(0,0,0,0.6)" }} />
+
       {/* Spotlight */}
       {rect && (
         <div style={{
@@ -110,6 +127,7 @@ export function GuidedTour({ steps, started, onEnd }: GuidedTourProps) {
           transition:"top 0.35s ease, left 0.35s ease, width 0.35s ease, height 0.35s ease",
         }} />
       )}
+
       {/* Card */}
       <div
         onClick={e => e.stopPropagation()}
@@ -132,7 +150,9 @@ export function GuidedTour({ steps, started, onEnd }: GuidedTourProps) {
             <X size={15} />
           </button>
         </div>
+
         <p style={{ fontSize:"13px", color:"#374151", lineHeight:1.65, margin:"0 0 12px" }}>{current.desc}</p>
+
         {/* Dots */}
         <div style={{ display:"flex", gap:"4px", justifyContent:"center", marginBottom:"12px" }}>
           {steps.map((_,i) => (
@@ -143,6 +163,7 @@ export function GuidedTour({ steps, started, onEnd }: GuidedTourProps) {
             }} />
           ))}
         </div>
+
         {/* Nav — always show Next */}
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
           <button onClick={endTour} style={{ background:"none", border:"none", color:"#9CA3AF", fontSize:"12px", cursor:"pointer", fontFamily:"inherit" }}>
