@@ -9,7 +9,7 @@ const LENS_MIRROR_TOUR: TourStep[] = [
   { selector: ".tabs", title: "অপটিক্যাল উপাদান", desc: "চার ধরনের উপাদান আছে — উত্তল লেন্স, অবতল লেন্স, উত্তল দর্পণ ও অবতল দর্পণ। যেকোনো একটি ক্লিক করুন।", waitForClick: true },
   { selector: ".canvas-wrap", title: "সিমুলেশন ক্যানভাস", desc: "এখানে রশ্মি চিত্র দেখা যাবে। মোমবাতিটি ধরে যেকোনো দিকে টেনে সরাতে পারবেন।" },
   { selector: ".light-btn", title: "আলো বাটন", desc: "এই বাটনে ক্লিক করুন — মোমবাতি জ্বলবে এবং আলোর রশ্মি চিত্র দেখা যাবে।", waitForClick: true },
-  { selector: ".all-rays-btn", title: "সব রশ্মি", desc: "এই বাটনে ক্লিক করুন — সব দিক থেকে অনেক রশ্মি একসাথে দেখাবে!", waitForClick: true },
+  { selector: ".ctrl-toggle-switch", title: "সব রশ্মি টগল", desc: "এই টগলটি চালু করুন — সব দিক থেকে অনেক রশ্মি একসাথে দেখাবে!", waitForClick: true },
   { selector: ".slider-row", title: "দূরত্ব স্লাইডার", desc: "এই স্লাইডার দিয়ে বস্তুর দূরত্ব (u) এবং ফোকাস দূরত্ব (f) পরিবর্তন করুন। প্রতিবিম্ব কীভাবে বদলায় দেখুন!" },
   { selector: ".presets", title: "অবস্থান প্রিসেট", desc: "F ও 2F-এর মতো বিশেষ অবস্থানে মোমবাতি নিয়ে যান — যেকোনো একটি ক্লিক করুন।", waitForClick: true },
   { selector: ".formula-card", title: "সূত্র ও গণনা", desc: "এখানে লেন্স বা দর্পণের সূত্র এবং বর্তমান মানগুলো দিয়ে হিসাব দেখা যাবে।" },
@@ -102,6 +102,31 @@ const SimulatorPage = () => {
   return (
     <div className="simulator-page-root">
       <style>{`
+        @keyframes _tourBtnPulse {
+          0%,100% { box-shadow: 0 2px 10px rgba(232,0,29,0.35); }
+          50%     { box-shadow: 0 2px 10px rgba(232,0,29,0.35), 0 0 0 6px rgba(232,0,29,0.1); }
+        }
+        .tour-btn {
+          background: linear-gradient(135deg, #E8001D, #b91c1c);
+          color: #fff; border: none; border-radius: 50px;
+          padding: 9px 20px; font-weight: 700; font-size: 13px;
+          cursor: pointer; display: flex; align-items: center; gap: 7px;
+          box-shadow: 0 2px 10px rgba(232,0,29,0.35);
+          transition: transform 0.2s cubic-bezier(0.2,0.8,0.2,1), box-shadow 0.2s cubic-bezier(0.2,0.8,0.2,1);
+          font-family: Inter, sans-serif;
+          flex-shrink: 0;
+          animation: _tourBtnPulse 2.8s ease-in-out infinite;
+        }
+        .tour-btn:hover {
+          transform: scale(1.06) translateY(-1px);
+          box-shadow: 0 6px 20px rgba(232,0,29,0.5);
+          animation: none;
+        }
+        .tour-btn:active {
+          transform: scale(0.96);
+          box-shadow: 0 1px 6px rgba(232,0,29,0.3);
+          animation: none;
+        }
         .simulator-page-root {
           background: #F9FAFB;
           min-height: 100vh;
@@ -114,6 +139,10 @@ const SimulatorPage = () => {
           justify-content: space-between;
           align-items: center;
           padding: 12px 0 24px;
+          max-width: 1216px;
+          margin-left: auto;
+          margin-right: auto;
+          width: 100%;
         }
         @media (max-width: 540px) {
           .central-header {
@@ -121,6 +150,7 @@ const SimulatorPage = () => {
             align-items: center;
             gap: 12px;
             padding: 12px 0 16px;
+            max-width: none;
           }
           .header-left-spacer { display: none; }
         }
@@ -260,8 +290,8 @@ const SimulatorPage = () => {
           <div className="intro-card">
             <div className="intro-header">
               <button className="close-intro" onClick={closeIntro}><X size={18}/></button>
-              <div className="intro-title">সিমুলেটরে স্বাগতম!</div>
-              <div className="intro-subtitle">আলোর বিজ্ঞানের এক জাদুকরী জগৎ</div>
+              <div className="intro-title">আলোর রহস্য উন্মোচন করো!</div>
+              <div className="intro-subtitle">লেন্স, দর্পণ ও প্রতিসরণ — নিজে পরীক্ষা করে শেখো</div>
             </div>
             <div className="intro-body">
               <div className="presets-title">কি কি করা যাবে?</div>
@@ -327,19 +357,8 @@ const SimulatorPage = () => {
         {/* Tutorial button — red */}
         <button
           id="guided-tour-btn"
+          className="tour-btn"
           onClick={() => { setShowIntro(false); setTourActive(true); }}
-          style={{
-            background: 'linear-gradient(135deg, #E8001D, #b91c1c)',
-            color: '#fff', border: 'none', borderRadius: '50px',
-            padding: '8px 18px', fontWeight: 700, fontSize: '13px',
-            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '7px',
-            boxShadow: '0 2px 10px rgba(232,0,29,0.35)',
-            transition: 'transform 0.15s, box-shadow 0.15s',
-            fontFamily: 'Inter, sans-serif',
-            flexShrink: 0,
-          }}
-          onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.05)'; e.currentTarget.style.boxShadow = '0 4px 16px rgba(232,0,29,0.5)'; }}
-          onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 2px 10px rgba(232,0,29,0.35)'; }}
         >
           <Navigation size={14} />
           Tutorial
