@@ -583,8 +583,8 @@ const Refraction = ({ hideNav = false }: { hideNav?: boolean }) => {
       const nRight = outwardNormal(apex, right);
       const nBottom = outwardNormal(left, right);
 
-      const dashOffset = animate ? -(tRef.current * 0.04) : 0;
-      const tNorm = (Math.sin(tRef.current * 0.02) + 1) / 2;
+      const dashOffset = animate ? -(tRef.current * 0.02) : 0;
+      const tNorm = (Math.sin(tRef.current * 0.012) + 1) / 2;
 
       const results: { id: number; theta_i: number; deviations: number[] }[] = [];
 
@@ -1031,9 +1031,9 @@ const Refraction = ({ hideNav = false }: { hideNav?: boolean }) => {
     };
 
     const loop = (now: number) => {
-      tRef.current += 0.5;
+      tRef.current += 0.3;
       if (animate) {
-        animProgressRef.current = Math.min(1, animProgressRef.current + 0.006);
+        animProgressRef.current = Math.min(1, animProgressRef.current + 0.004);
         setAnimProgress(animProgressRef.current);
       } else {
         animProgressRef.current = 1;
@@ -1083,6 +1083,9 @@ const Refraction = ({ hideNav = false }: { hideNav?: boolean }) => {
     }
     const id = nextRayId.current++;
     setRays((rs) => [...rs, { id, sx, sy }]);
+    // Reset animation so the new ray draws in slowly
+    animProgressRef.current = 0;
+    setAnimProgress(0);
     setPlacingRay(false);
   };
 
