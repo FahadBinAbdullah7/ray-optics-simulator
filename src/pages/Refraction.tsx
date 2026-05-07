@@ -251,7 +251,9 @@ const Refraction = ({ hideNav = false }: { hideNav?: boolean }) => {
   });
   const [thickness, setThickness] = useState(() => {
     const q = searchParams.get("t");
-    return q ? parseInt(q) : 160;
+    const parsed = q ? parseInt(q) : 45;
+    // 160 was the old default — treat it as if no param was set
+    return parsed === 160 ? 45 : parsed;
   });
   const [animate, setAnimate] = useState(true);
   const tRef = useRef(0);
@@ -296,15 +298,16 @@ const Refraction = ({ hideNav = false }: { hideNav?: boolean }) => {
     const fit = () => {
       const container = canvas.parentElement;
       if (!container) return;
-      // Force a minimum width to ensure horizontal scroll on mobile
-      const w = Math.max(container.clientWidth, 800);
-      const h = 480; 
+      const isMobile = window.innerWidth < 768;
+      // On mobile: fit exactly to container width; on desktop: minimum 800px with horizontal scroll
+      const w = isMobile ? container.clientWidth : Math.max(container.clientWidth, 800);
+      const h = isMobile ? 260 : 480;
       canvas.width = w * dpr;
       canvas.height = h * dpr;
       canvas.style.width = `${w}px`;
       canvas.style.height = `${h}px`;
-      
-      if (!initialScrollDone && container.clientWidth < w) {
+
+      if (!isMobile && !initialScrollDone && container.clientWidth < w) {
         container.scrollLeft = (w - container.clientWidth) / 2;
         initialScrollDone = true;
       }
@@ -371,28 +374,31 @@ const Refraction = ({ hideNav = false }: { hideNav?: boolean }) => {
 
       const entryX = slabLeft;
       const entryY = cy;
-      const rayStartX = entryX - 220;
-      const rayStartY = entryY - 220 * Math.tan(theta1);
+      const inDist = W * 0.38;
+      const outDist = W * 0.38;
+      const rayStartX = entryX - inDist;
+      const rayStartY = entryY - inDist * Math.tan(theta1);
       const insideDx = thickness;
       const insideDy = thickness * Math.tan(theta2);
       const exitX = entryX + insideDx;
       const exitY = entryY + insideDy;
-      const outDx = 260;
-      const outDy = 260 * Math.tan(theta1);
+      const outDx = outDist;
+      const outDy = outDist * Math.tan(theta1);
       const outEndX = exitX + outDx;
       const outEndY = exitY + outDy;
 
       const dashOffset = animate ? -(tRef.current * 0.03) : 0;
       const prog = animProgressRef.current;
 
+      const normalLen = H * 0.18;
       ctx.strokeStyle = "rgba(255,255,255,0.25)";
       ctx.setLineDash([4, 4]);
       ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.moveTo(entryX, entryY - 70);
-      ctx.lineTo(entryX, entryY + 70);
-      ctx.moveTo(exitX, exitY - 70);
-      ctx.lineTo(exitX, exitY + 70);
+      ctx.moveTo(entryX, entryY - normalLen);
+      ctx.lineTo(entryX, entryY + normalLen);
+      ctx.moveTo(exitX, exitY - normalLen);
+      ctx.lineTo(exitX, exitY + normalLen);
       ctx.stroke();
       ctx.setLineDash([]);
 
@@ -474,7 +480,7 @@ const Refraction = ({ hideNav = false }: { hideNav?: boolean }) => {
     const drawPrism = (ctx: CanvasRenderingContext2D, W: number, H: number) => {
       const cx = W / 2;
       const cy = H / 2;
-      const size = Math.min(W, H) * (W < 500 ? 0.22 : 0.38);
+      const size = Math.min(W, H) * (W < 500 ? 0.25 : 0.38);
 
       const depth3D = size * 0.18;
       const apex = { x: cx, y: cy - size * 0.55 };
@@ -1138,7 +1144,7 @@ const Refraction = ({ hideNav = false }: { hideNav?: boolean }) => {
           <div className="experiment-canvas">
             <div className="ref-card canvas-card">
               <div className="canvas-wrap">
-                <canvas ref={canvasRef} onClick={handleCanvasClick} className="block w-full" style={{ height: 560, cursor: mode === "prism" && placingRay ? "crosshair" : "default" }} />
+                <canvas ref={canvasRef} onClick={handleCanvasClick} className="block w-full" style={{ cursor: mode === "prism" && placingRay ? "crosshair" : "default" }} />
               </div>
               <div className="action-row">
                 <button
