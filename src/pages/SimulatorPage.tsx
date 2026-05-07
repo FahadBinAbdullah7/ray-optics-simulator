@@ -144,15 +144,24 @@ const SimulatorPage = () => {
           margin-right: auto;
           width: 100%;
         }
+        .header-logo {
+          height: 44px;
+          width: auto;
+          object-fit: contain;
+          flex-shrink: 0;
+        }
         @media (max-width: 540px) {
           .central-header {
-            flex-direction: column;
+            flex-direction: row;
             align-items: center;
-            gap: 12px;
+            justify-content: space-between;
+            gap: 0;
             padding: 12px 0 16px;
             max-width: none;
           }
-          .header-left-spacer { display: none; }
+          .header-logo {
+            height: 34px;
+          }
         }
         .main-nav-container {
           max-width: 1216px;
@@ -345,16 +354,13 @@ const SimulatorPage = () => {
       )}
 
       <header className="central-header">
-        {/* Left spacer — mirrors Tutorial button width to keep logo centered on desktop */}
-        <div className="header-left-spacer" style={{ flex: '0 0 120px' }} />
-        {/* Centered branding */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, justifyContent: 'center' }}>
-          <div style={{ background: '#E8001D', padding: '8px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M6 18h8"/><path d="M3 22h18"/><path d="M14 22a7 7 0 1 0 0-14h-1"/><path d="M9 14h2"/><path d="M9 12a2 2 0 1 1-4 0V6a2 2 0 1 1 4 0v6Z"/><path d="M12 6V3a1 1 0 0 0-1-1H9a1 1 0 0 0-1 1v3"/></svg>
-          </div>
-          <span style={{ fontSize: '24px', fontWeight: 800, color: '#111827' }}>টেন মিনিট স্কুল</span>
-        </div>
-        {/* Tutorial button — red */}
+        {/* Brand logo — left */}
+        <img
+          src="/logo.png"
+          alt="টেন মিনিট স্কুল"
+          className="header-logo"
+        />
+        {/* Tutorial button — right */}
         <button
           id="guided-tour-btn"
           className="tour-btn"
