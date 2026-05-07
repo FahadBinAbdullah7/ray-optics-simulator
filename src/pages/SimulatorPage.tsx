@@ -1,10 +1,46 @@
+import { useState, useEffect } from "react";
 import { useSearchParams, useLocation } from "react-router-dom";
 import RayOptics from "@/components/RayOptics";
 import Refraction from "./Refraction";
+import { Sparkles, GraduationCap, Zap, Play, X, ChevronRight } from "lucide-react";
+
+const PRESETS = [
+  {
+    title: "উত্তল লেন্সের প্রতিবিম্ব",
+    desc: "ফোকাসের ভেতরে বস্তুর বিবর্ধিত চিত্র",
+    type: "lens-mirror",
+    mode: "convexLens",
+    params: { u: "50", f: "80" }
+  },
+  {
+    title: "অবতল লেন্সের প্রতিবিম্ব",
+    desc: "সব সময় অভাসী ও সোজা প্রতিবিম্ব",
+    type: "lens-mirror",
+    mode: "concaveLens",
+    params: { u: "150", f: "80" }
+  },
+  {
+    title: "প্রিজমে বিচ্ছুরণ",
+    desc: "সাত রঙের আলোর সুন্দর খেলা",
+    type: "refraction",
+    mode: "prism",
+    params: { angle: "35" }
+  },
+  {
+    title: "পানিতে লাঠি বাঁকা",
+    desc: "প্রতিসরণের বাস্তব উদাহরণ",
+    type: "refraction",
+    mode: "stick",
+    params: { n: "1.33" }
+  }
+];
 
 const SimulatorPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
+  const [showIntro, setShowIntro] = useState(!searchParams.get("mode"));
+  const [isExiting, setIsExiting] = useState(false);
+  const [presetKey, setPresetKey] = useState(0);
   
   // Determine type from search param OR pathname
   const typeParam = searchParams.get("type");
@@ -13,13 +49,30 @@ const SimulatorPage = () => {
   const handleTypeChange = (newType: string) => {
     const params = new URLSearchParams(searchParams);
     params.set("type", newType);
-    // Set sensible default modes for each type
     if (newType === "refraction") {
       params.set("mode", "slab");
     } else {
       params.set("mode", "convexLens");
     }
     setSearchParams(params);
+  };
+
+  const closeIntro = () => {
+    setIsExiting(true);
+    setTimeout(() => {
+      setShowIntro(false);
+      setIsExiting(false);
+    }, 400);
+  };
+
+  const loadPreset = (p: typeof PRESETS[0]) => {
+    const params = new URLSearchParams();
+    params.set("type", p.type);
+    params.set("mode", p.mode);
+    Object.entries(p.params).forEach(([k, v]) => params.set(k, v));
+    setSearchParams(params);
+    setPresetKey(k => k + 1); // Force remount so fresh mode is read from URL
+    closeIntro();
   };
 
   return (
@@ -30,16 +83,13 @@ const SimulatorPage = () => {
           min-height: 100vh;
           padding: 16px;
           font-family: 'Hind Siliguri', 'Inter', sans-serif;
+          position: relative;
         }
         .central-header {
           display: flex;
           justify-content: center;
           align-items: center;
           padding: 12px 0 24px;
-        }
-        .app-logo {
-          height: 40px;
-          width: auto;
         }
         .main-nav-container {
           max-width: 1216px;
@@ -71,37 +121,172 @@ const SimulatorPage = () => {
           justify-content: center;
           white-space: nowrap;
         }
-        .main-tab-btn:hover:not(.active) {
-          background: #F3F4F6;
-          color: #374151;
-        }
         .main-tab-btn.active {
           background: #E8001D;
           color: #fff;
           border-color: #E8001D;
           box-shadow: 0 4px 12px rgba(232, 0, 29, 0.25);
         }
-        /* Mobile adjustments */
+
+        /* Intro Overlay */
+        .intro-overlay {
+          position: fixed;
+          top: 0; left: 0; right: 0; bottom: 0;
+          background: rgba(17, 24, 39, 0.85);
+          backdrop-filter: blur(8px);
+          z-index: 9999;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 20px;
+          transition: opacity 0.4s ease;
+        }
+        .intro-overlay.exiting {
+          opacity: 0;
+          pointer-events: none;
+        }
+        .intro-card {
+          background: #fff;
+          width: 100%;
+          max-width: 600px;
+          border-radius: 24px;
+          overflow: hidden;
+          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+          animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+          transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .intro-overlay.exiting .intro-card {
+          transform: translateY(-20px);
+        }
+        @keyframes slideUp {
+          from { transform: translateY(40px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+        .intro-header {
+          background: linear-gradient(135deg, #E8001D, #931212);
+          padding: 32px 24px;
+          color: #fff;
+          text-align: center;
+          position: relative;
+        }
+        .close-intro {
+          position: absolute;
+          top: 16px; right: 16px;
+          background: rgba(255, 255, 255, 0.2);
+          border: none;
+          width: 32px; height: 32px;
+          border-radius: 50%;
+          display: flex; align-items: center; justify-content: center;
+          color: #fff; cursor: pointer;
+        }
+        .intro-title { font-size: 28px; font-weight: 800; margin-bottom: 8px; }
+        .intro-subtitle { font-size: 16px; opacity: 0.9; }
+        
+        .intro-body { padding: 24px; max-height: 70vh; overflow-y: auto; }
+        .feature-list { display: grid; grid-template-columns: 1fr; gap: 16px; margin-bottom: 24px; }
+        @media (min-width: 480px) { .feature-list { grid-template-columns: 1fr 1fr; } }
+        .feature-item {
+          display: flex; align-items: flex-start; gap: 12px;
+          padding: 12px; background: #F9FAFB; border-radius: 16px;
+        }
+        .feature-icon {
+          background: #FFF5F6; padding: 8px; border-radius: 10px;
+          color: #E8001D; flex-shrink: 0;
+        }
+        .feature-text h4 { font-weight: 700; font-size: 14px; margin-bottom: 2px; }
+        .feature-text p { font-size: 12px; color: #6B7280; line-height: 1.4; }
+
+        .presets-title { font-weight: 800; font-size: 18px; margin-bottom: 12px; color: #111827; }
+        .presets-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+        @media (min-width: 480px) { .presets-grid { grid-template-columns: 1fr 1fr; } }
+        .preset-btn {
+          text-align: left; padding: 16px; border: 1px solid #E5E7EB; border-radius: 16px;
+          background: #fff; cursor: pointer; transition: all 0.2s;
+          display: flex; flex-direction: column; gap: 4px;
+        }
+        .preset-btn:hover { border-color: #E8001D; background: #FFF5F6; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(232, 0, 29, 0.1); }
+        .preset-name { font-weight: 700; font-size: 14px; color: #111827; }
+        .preset-desc { font-size: 12px; color: #6B7280; }
+
+        .start-btn {
+          width: 100%; margin-top: 24px; padding: 16px;
+          background: #E8001D; color: #fff; border: none; border-radius: 16px;
+          font-weight: 800; font-size: 16px; cursor: pointer;
+          display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+
         @media (max-width: 480px) {
-          .simulator-page-root {
-            padding: 12px 8px;
-          }
-          .central-header {
-            padding: 8px 0 16px;
-          }
-          .main-tab-btn {
-            font-size: 15px;
-            padding: 10px 12px;
-          }
+          .simulator-page-root { padding: 12px 8px; }
+          .main-tab-btn { font-size: 14px; padding: 10px 8px; }
+          .intro-title { font-size: 24px; }
         }
       `}</style>
+
+      {showIntro && (
+        <div className={`intro-overlay ${isExiting ? 'exiting' : ''}`}>
+          <div className="intro-card">
+            <div className="intro-header">
+              <button className="close-intro" onClick={closeIntro}><X size={18}/></button>
+              <div className="intro-title">সিমুলেটরে স্বাগতম!</div>
+              <div className="intro-subtitle">আলোর বিজ্ঞানের এক জাদুকরী জগৎ</div>
+            </div>
+            <div className="intro-body">
+              <div className="presets-title">কি কি করা যাবে?</div>
+              <div className="feature-list">
+                <div className="feature-item">
+                  <div className="feature-icon"><Zap size={20}/></div>
+                  <div className="feature-text">
+                    <h4>রশ্মি চিত্র পর্যবেক্ষণ</h4>
+                    <p>লেন্স ও দর্পণে আলোর গতিপথ সরাসরি দেখুন</p>
+                  </div>
+                </div>
+                <div className="feature-item">
+                  <div className="feature-icon"><GraduationCap size={20}/></div>
+                  <div className="feature-text">
+                    <h4>প্রতিবিম্বের বৈশিষ্ট্য</h4>
+                    <p>বাস্তব, অভাসী, সোজা বা উল্টো প্রতিবিম্ব বুঝুন</p>
+                  </div>
+                </div>
+                <div className="feature-item">
+                  <div className="feature-icon"><Sparkles size={20}/></div>
+                  <div className="feature-text">
+                    <h4>আলোর বিচ্ছুরণ</h4>
+                    <p>প্রিজমে সাদা আলোর সাতটি রঙে ভাগ হওয়া দেখুন</p>
+                  </div>
+                </div>
+                <div className="feature-item">
+                  <div className="feature-icon"><Play size={20}/></div>
+                  <div className="feature-text">
+                    <h4>বাস্তব উদাহরণ</h4>
+                    <p>গ্লাসে লাঠি বাঁকা বা মেকআপ আয়নার কাজ বুঝুন</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="presets-title">দ্রুত শুরু করুন (Presets)</div>
+              <div className="presets-grid">
+                {PRESETS.map((p, i) => (
+                  <button key={i} className="preset-btn" onClick={() => loadPreset(p)}>
+                    <div className="preset-name">{p.title}</div>
+                    <div className="preset-desc">{p.desc}</div>
+                  </button>
+                ))}
+              </div>
+
+              <button className="start-btn" onClick={closeIntro}>
+                সরাসরি সিমুলেশন শুরু করি <ChevronRight size={20}/>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <header className="central-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div style={{ background: '#E8001D', padding: '8px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M6 18h8"/><path d="M3 22h18"/><path d="M14 22a7 7 0 1 0 0-14h-1"/><path d="M9 14h2"/><path d="M9 12a2 2 0 1 1-4 0V6a2 2 0 1 1 4 0v6Z"/><path d="M12 6V3a1 1 0 0 0-1-1H9a1 1 0 0 0-1 1v3"/></svg>
           </div>
-          <span style={{ fontSize: '24px', fontBold: '700', color: '#111827', fontWeight: 800 }}>টেন মিনিট স্কুল</span>
+          <span style={{ fontSize: '24px', fontWeight: 800, color: '#111827' }}>টেন মিনিট স্কুল</span>
         </div>
       </header>
 
@@ -124,9 +309,9 @@ const SimulatorPage = () => {
 
       <div className="simulator-content">
         {type === "refraction" ? (
-          <Refraction hideNav />
+          <Refraction key={`refraction-${presetKey}`} hideNav />
         ) : (
-          <RayOptics hideNav />
+          <RayOptics key={`rayoptics-${presetKey}`} hideNav />
         )}
       </div>
     </div>
