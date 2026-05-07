@@ -376,7 +376,7 @@ const Refraction = ({ hideNav = false }: { hideNav?: boolean }) => {
       const outEndX = exitX + outDx;
       const outEndY = exitY + outDy;
 
-      const dashOffset = animate ? -(tRef.current * 0.06) : 0;
+      const dashOffset = animate ? -(tRef.current * 0.03) : 0;
       const prog = animProgressRef.current;
 
       ctx.strokeStyle = "rgba(255,255,255,0.25)";
@@ -468,7 +468,7 @@ const Refraction = ({ hideNav = false }: { hideNav?: boolean }) => {
     const drawPrism = (ctx: CanvasRenderingContext2D, W: number, H: number) => {
       const cx = W / 2;
       const cy = H / 2;
-      const size = Math.min(W, H) * 0.38;
+      const size = Math.min(W, H) * (W < 500 ? 0.22 : 0.38);
 
       const depth3D = size * 0.18;
       const apex = { x: cx, y: cy - size * 0.55 };
@@ -583,8 +583,8 @@ const Refraction = ({ hideNav = false }: { hideNav?: boolean }) => {
       const nRight = outwardNormal(apex, right);
       const nBottom = outwardNormal(left, right);
 
-      const dashOffset = animate ? -(tRef.current * 0.08) : 0;
-      const tNorm = (Math.sin(tRef.current * 0.04) + 1) / 2;
+      const dashOffset = animate ? -(tRef.current * 0.04) : 0;
+      const tNorm = (Math.sin(tRef.current * 0.02) + 1) / 2;
 
       const results: { id: number; theta_i: number; deviations: number[] }[] = [];
 
@@ -1031,9 +1031,9 @@ const Refraction = ({ hideNav = false }: { hideNav?: boolean }) => {
     };
 
     const loop = (now: number) => {
-      tRef.current += 1;
+      tRef.current += 0.5;
       if (animate) {
-        animProgressRef.current = Math.min(1, animProgressRef.current + 0.012);
+        animProgressRef.current = Math.min(1, animProgressRef.current + 0.006);
         setAnimProgress(animProgressRef.current);
       } else {
         animProgressRef.current = 1;
