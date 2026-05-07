@@ -430,7 +430,8 @@ export default function RayOptics({ hideNav = false }: { hideNav?: boolean }) {
     const smoothUMag = smoothURef.current;
     const smoothInv = isLens ? 1 / f + 1 / smoothU : 1 / f - 1 / smoothU;
     const drawV = Math.abs(smoothInv) < 1e-6 ? Infinity : 1 / smoothInv;
-    const drawMag = isFinite(drawV) ? drawV / smoothU : Infinity;
+    // Mirrors: magnification = -v/u (note the minus sign); lenses: m = v/u
+    const drawMag = isFinite(drawV) ? (isLens ? drawV / smoothU : -(drawV / smoothU)) : Infinity;
     const drawIsReal = isLens ? drawV > 0 : drawV < 0;
 
     const cx = W / 2;
@@ -724,6 +725,10 @@ export default function RayOptics({ hideNav = false }: { hideNav?: boolean }) {
               outX = 0 + dx * k; outY = h + dy * k;
               virtualBack = true;
             }
+            // Solid reflected rays stay on the object side (x ≤ surfaceWorldX)
+            // surfaceWorldX is ≤ 0 for concave mirror, so this is safe.
+            // We reference surfaceWorldX later after it's computed; use 0 as the conservative bound here.
+            if (!virtualBack) outX = Math.min(-0.001, outX);
           }
         } else {
           const slope = (h - oy) / (0 - ox);
@@ -731,21 +736,32 @@ export default function RayOptics({ hideNav = false }: { hideNav?: boolean }) {
           outX = xEnd; outY = h + slope * (xEnd - 0);
         }
 
+        // Compute the actual mirror/lens surface x at this height.
+        // For a mirror drawn as a quadratic bezier with the given bulge,
+        // the surface x in canvas pixels = cx - bulge * hNorm².
+        // Lenses use the thin-lens approximation (all refraction at x = cx).
+        const hNorm = elementHalfH > 0 ? Math.max(-1, Math.min(1, h / elementHalfH)) : 0;
+        const surfaceBulge = isLens ? 0 : (mode === "concaveMirror" ? 20 : -20);
+        const surfaceCanvasX = cx - surfaceBulge * hNorm * hNorm;
+        const surfaceWorldX = (surfaceCanvasX - cx) / scale;
+
         const incProg = Math.min(1, animProgress * 1.5);
-        const tx = ox + (0 - ox) * incProg;
-        const ty = oy + (h - oy) * incProg;
+        // Incoming ray ends at the true surface point, not at the axis (cx)
+        const incEndX = X(ox) + (surfaceCanvasX - X(ox)) * incProg;
+        const incEndY = Y(oy) + (Y(h) - Y(oy)) * incProg;
         ctx.setLineDash([]);
         ctx.beginPath();
         ctx.moveTo(X(ox), Y(oy));
-        ctx.lineTo(X(tx), Y(ty));
+        ctx.lineTo(incEndX, incEndY);
         ctx.stroke();
 
         if (animProgress > 0.5) {
           const outProg = Math.min(1, (animProgress - 0.5) / 0.5);
-          const ex = 0 + (outX - 0) * outProg;
+          // Reflected ray starts at the true surface point
+          const ex = surfaceWorldX + (outX - surfaceWorldX) * outProg;
           const ey = h + (outY - h) * outProg;
           ctx.beginPath();
-          ctx.moveTo(X(0), Y(h));
+          ctx.moveTo(surfaceCanvasX, Y(h));
           ctx.lineTo(X(ex), Y(ey));
           ctx.stroke();
 
@@ -755,7 +771,7 @@ export default function RayOptics({ hideNav = false }: { hideNav?: boolean }) {
             ctx.lineWidth = 1;
             ctx.globalAlpha *= 0.7;
             ctx.beginPath();
-            ctx.moveTo(X(0), Y(h));
+            ctx.moveTo(surfaceCanvasX, Y(h));
             ctx.lineTo(X(imgX), Y(imgY));
             ctx.stroke();
             ctx.restore();
@@ -769,7 +785,7 @@ export default function RayOptics({ hideNav = false }: { hideNav?: boolean }) {
       ctx.save();
       ctx.globalAlpha = imgAlpha;
       const ix = X(drawV);
-      const isInverted = isLens ? drawMag < 0 : drawMag > 0;
+      const isInverted = drawMag < 0;
       const imgCandleW = candleW * Math.min(2, Math.abs(drawMag));
       // Scale image base/top relative to axis using magnification, preserving
       // the candle's vertical offset.
@@ -937,7 +953,7 @@ export default function RayOptics({ hideNav = false }: { hideNav?: boolean }) {
       <div className="ro-header" style={{ position: "relative" }}>
         <div className="icon"><Microscope size={20} /></div>
         <div>
-          <h1 className="bn">আলোর প্রতিসরণ ও প্রতিফলন</h1>
+          <h1 className="bn">লেন্স ও দর্পণ</h1>
           <p>Ray Optics: Lens & Mirror</p>
         </div>
         <div style={{ marginLeft: "auto" }}>
@@ -1187,14 +1203,6 @@ export default function RayOptics({ hideNav = false }: { hideNav?: boolean }) {
               >
                 {lightOn ? "আলো নিভাও" : "মোমবাতি জ্বালাও"}
               </button>
-              <button
-                className={"all-rays-btn " + (allRays ? "on" : "")}
-                onClick={() => { setAllRays(v => !v); setAnimProgress(0); }}
-                title="সব দিকের রশ্মি দেখাও"
-              >
-                {allRays ? "সব রশ্মি: চালু" : "সব রশ্মি"}
-              </button>
-              <button className="reset-btn" onClick={() => { setAnimProgress(0); setYObj(50); }}>আবার</button>
             </div>
             <div className="legend">
               <span><i style={{ background: RAY_COLORS.ray1 }} /> সমান্তরাল রশ্মি</span>
@@ -1223,6 +1231,27 @@ export default function RayOptics({ hideNav = false }: { hideNav?: boolean }) {
                   {p.label}
                 </button>
               ))}
+            </div>
+          </div>
+          <div className="ro-card ctrl-toggles-card">
+            <div className="ctrl-toggle-row">
+              <span className="ctrl-toggle-label bn">সব রশ্মি</span>
+              <button
+                className={"ctrl-toggle-switch " + (allRays ? "on" : "")}
+                onClick={() => { setAllRays(v => !v); setAnimProgress(0); }}
+                aria-pressed={allRays}
+              >
+                <span className="ctrl-toggle-thumb" />
+              </button>
+            </div>
+            <div className="ctrl-toggle-row">
+              <span className="ctrl-toggle-label bn">আবার</span>
+              <button
+                className="ctrl-reset-toggle"
+                onClick={() => { setAnimProgress(0); setYObj(50); }}
+              >
+                ↺
+              </button>
             </div>
           </div>
         </div>
@@ -1263,17 +1292,17 @@ export default function RayOptics({ hideNav = false }: { hideNav?: boolean }) {
         <div className="formula-values">
           <div className="fv-row">
             <div className="fraction small">
-              <span className="num">1</span>
+              <span className="num">১</span>
               <span className="den">{isFinite(v) ? fmtNum(v, 1) : "∞"}</span>
             </div>
             <span className="op">{isLens ? "−" : "+"}</span>
             <div className="fraction small">
-              <span className="num">1</span>
+              <span className="num">১</span>
               <span className="den">{fmtNum(u)}</span>
             </div>
             <span className="op">=</span>
             <div className="fraction small">
-              <span className="num">1</span>
+              <span className="num">১</span>
               <span className="den">{fmtNum(f)}</span>
             </div>
           </div>
@@ -2228,11 +2257,17 @@ canvas { display: block; width: 100%; }
 .light-btn { flex: 1; min-height: 48px; padding: 12px 16px; border-radius: 12px; border: 1px solid var(--success-dark); background: var(--success); color: #fff; font-weight: 700; font-size: 15px; font-family: inherit; cursor: pointer; transition: all 180ms; box-shadow: 0 2px 8px rgba(28,171,85,0.25); }
 .light-btn:active { transform: scale(0.98); }
 .light-btn.on { background: linear-gradient(135deg,#FF7B2A,#E8001D); border-color: #931212; box-shadow: 0 0 0 3px rgba(232,0,29,0.15), 0 4px 14px rgba(232,123,42,0.4); }
-.reset-btn { min-height: 48px; padding: 12px 14px; border-radius: 12px; border: 1px solid #0369A1; background: linear-gradient(135deg, #0EA5E9, #0284C7); color: #fff; font-weight: 700; font-size: 13px; font-family: inherit; cursor: pointer; box-shadow: 0 2px 8px rgba(2,132,199,0.3); transition: all 180ms; }
-.reset-btn:active { transform: scale(0.98); }
-.all-rays-btn { min-height: 48px; padding: 12px 14px; border-radius: 12px; border: 1px solid #9F1239; background: linear-gradient(135deg, #EC4899, #BE185D); color:#fff; font-weight: 700; font-size: 13px; font-family: inherit; cursor: pointer; transition: all 180ms; box-shadow: 0 2px 8px rgba(236,72,153,0.3); }
-.all-rays-btn.on { background: linear-gradient(135deg, #8B5CF6, #6D28D9); color:#fff; border-color: #5B21B6; box-shadow: 0 0 0 3px rgba(139,92,246,0.2), 0 4px 14px rgba(139,92,246,0.35); }
-.all-rays-btn:active { transform: scale(0.98); }
+.ctrl-toggles-card { display: flex; flex-direction: column; gap: 0; padding: 4px 12px; }
+.ctrl-toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.ctrl-toggle-row:last-child { border-bottom: none; }
+.ctrl-toggle-label { font-size: 14px; font-weight: 600; color: var(--ten-ink); }
+.ctrl-toggle-switch { position: relative; width: 48px; height: 26px; border-radius: 999px; border: none; background: #D1D5DB; cursor: pointer; padding: 0; transition: background 0.2s; flex-shrink: 0; }
+.ctrl-toggle-switch.on { background: var(--ten-red); }
+.ctrl-toggle-thumb { position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.2); transition: transform 0.2s; display: block; }
+.ctrl-toggle-switch.on .ctrl-toggle-thumb { transform: translateX(22px); }
+.ctrl-reset-toggle { width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid var(--ten-red-dark); background: var(--ten-red); color: #fff; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.15s, box-shadow 0.15s; flex-shrink: 0; box-shadow: 0 2px 8px rgba(232,0,29,0.3); }
+.ctrl-reset-toggle:active { transform: rotate(-90deg) scale(0.92); }
+.ctrl-reset-toggle:hover { box-shadow: 0 4px 12px rgba(232,0,29,0.45); }
 .legend { display: flex; gap: 10px; flex-wrap: wrap; font-size: 11px; color: var(--gray-600); margin-top: 10px; padding: 0 4px; }
 .legend span { display: inline-flex; align-items: center; gap: 4px; }
 .legend i { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
