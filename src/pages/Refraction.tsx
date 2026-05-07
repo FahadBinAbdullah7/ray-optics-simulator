@@ -826,7 +826,8 @@ const Refraction = ({ hideNav = false }: { hideNav?: boolean }) => {
     };
 
     const drawStick = (ctx: CanvasRenderingContext2D, W: number, H: number) => {
-      // Scene: a glass with water; a straight stick partially submerged appears bent when viewed from above.
+      // Scale all absolute sizes to canvas dimensions (designed for H=480 desktop)
+      const drawScale = H / 480;
       const cx = W / 2;
       const waterTop = H * 0.52;
       const waterBot = H * 0.85;
@@ -877,20 +878,21 @@ const Refraction = ({ hideNav = false }: { hideNav?: boolean }) => {
       // direction unit vector pointing INTO the water (down-right when angle > 0)
       const dirX = Math.sin(aStick);
       const dirY = Math.cos(aStick);
-      const submergedLen = stickSubmerged;
+      const submergedLen = stickSubmerged * drawScale;
       const realEndX = entryX + dirX * submergedLen;
       const realEndY = entryY + dirY * submergedLen;
       // Above-water portion: extend opposite direction
-      const aboveLen = 130;
+      const aboveLen = 130 * drawScale;
       const stickTopX = entryX - dirX * aboveLen;
       const stickTopY = entryY - dirY * aboveLen;
+      const stickW = Math.max(4, 10 * drawScale);
 
       // Draw real stick (above water + faint dashed continuation underwater)
       ctx.save();
       ctx.lineCap = "round";
       // Above-water portion (solid brown)
       ctx.strokeStyle = "#C98B4B";
-      ctx.lineWidth = 10;
+      ctx.lineWidth = stickW;
       ctx.beginPath();
       ctx.moveTo(stickTopX, stickTopY);
       ctx.lineTo(entryX, entryY);
@@ -898,7 +900,7 @@ const Refraction = ({ hideNav = false }: { hideNav?: boolean }) => {
       // Real underwater path (dashed, faint) — "actual position"
       ctx.setLineDash([6, 6]);
       ctx.strokeStyle = "rgba(201,139,75,0.55)";
-      ctx.lineWidth = 8;
+      ctx.lineWidth = stickW * 0.85;
       ctx.beginPath();
       ctx.moveTo(entryX, entryY);
       ctx.lineTo(realEndX, realEndY);
@@ -914,14 +916,14 @@ const Refraction = ({ hideNav = false }: { hideNav?: boolean }) => {
       ctx.save();
       ctx.lineCap = "round";
       ctx.strokeStyle = "#E0A45C";
-      ctx.lineWidth = 10;
+      ctx.lineWidth = stickW;
       ctx.beginPath();
       ctx.moveTo(entryX, entryY);
       ctx.lineTo(apparentEndX, apparentEndY);
       ctx.stroke();
       // small highlight
       ctx.strokeStyle = "rgba(255,235,200,0.55)";
-      ctx.lineWidth = 2;
+      ctx.lineWidth = Math.max(1.5, 2 * drawScale);
       ctx.beginPath();
       ctx.moveTo(entryX, entryY);
       ctx.lineTo(apparentEndX, apparentEndY);
@@ -1004,30 +1006,34 @@ const Refraction = ({ hideNav = false }: { hideNav?: boolean }) => {
       ctx.restore();
 
       // Normal at refraction point
+      const normalLen = Math.max(28, 60 * drawScale);
       ctx.save();
       ctx.strokeStyle = "rgba(255,255,255,0.55)";
       ctx.setLineDash([3, 4]);
       ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.moveTo(refractX, refractY - 60);
-      ctx.lineTo(refractX, refractY + 60);
+      ctx.moveTo(refractX, refractY - normalLen);
+      ctx.lineTo(refractX, refractY + normalLen);
       ctx.stroke();
       ctx.setLineDash([]);
       ctx.restore();
 
       // Eye icon
+      const eyeRx = Math.max(10, 18 * drawScale);
+      const eyeRy = Math.max(6, 11 * drawScale);
+      const eyePupilR = Math.max(3, 6 * drawScale);
       ctx.save();
       ctx.fillStyle = "#fff";
       ctx.beginPath();
-      ctx.ellipse(eyeX, eyeY, 18, 11, 0, 0, Math.PI * 2);
+      ctx.ellipse(eyeX, eyeY, eyeRx, eyeRy, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.fillStyle = "#1a1a2a";
       ctx.beginPath();
-      ctx.arc(eyeX, eyeY, 6, 0, Math.PI * 2);
+      ctx.arc(eyeX, eyeY, eyePupilR, 0, Math.PI * 2);
       ctx.fill();
       ctx.fillStyle = "#fff";
       ctx.font = "12px 'Hind Siliguri', sans-serif";
-      ctx.fillText("পর্যবেক্ষক", eyeX - 28, eyeY + 28);
+      ctx.fillText("পর্যবেক্ষক", eyeX - 28, eyeY + eyeRy + 14);
       ctx.restore();
 
       // Labels
