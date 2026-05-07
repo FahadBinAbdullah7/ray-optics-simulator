@@ -115,6 +115,18 @@ const SimulatorPage = () => {
           align-items: center;
           padding: 12px 0 24px;
         }
+        @media (max-width: 500px) {
+          .central-header {
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 0 16px;
+            position: static !important;
+          }
+          .central-header-spacer {
+            display: none;
+          }
+        }
         .main-nav-container {
           max-width: 1216px;
           margin: 0 auto 16px;
@@ -314,7 +326,7 @@ const SimulatorPage = () => {
           <span style={{ fontSize: '24px', fontWeight: 800, color: '#111827' }}>টেন মিনিট স্কুল</span>
         </div>
         {/* Spacer to push button right */}
-        <div style={{ flex: 1 }} />
+        <div className="central-header-spacer" style={{ flex: 1 }} />
         {/* Tutorial button — red */}
         <button
           id="guided-tour-btn"
