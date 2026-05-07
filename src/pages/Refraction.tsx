@@ -292,6 +292,7 @@ const Refraction = ({ hideNav = false }: { hideNav?: boolean }) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const dpr = window.devicePixelRatio || 1;
+    let initialScrollDone = false;
     const fit = () => {
       const container = canvas.parentElement;
       if (!container) return;
@@ -302,11 +303,16 @@ const Refraction = ({ hideNav = false }: { hideNav?: boolean }) => {
       canvas.height = h * dpr;
       canvas.style.width = `${w}px`;
       canvas.style.height = `${h}px`;
+      
+      if (!initialScrollDone && container.clientWidth < w) {
+        container.scrollLeft = (w - container.clientWidth) / 2;
+        initialScrollDone = true;
+      }
     };
     fit();
     window.addEventListener("resize", fit);
     return () => window.removeEventListener("resize", fit);
-  }, []);
+  }, [mode]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
