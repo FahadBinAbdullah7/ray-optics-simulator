@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useSearchParams, useLocation } from "react-router-dom";
 import RayOptics from "@/components/RayOptics";
 import Refraction from "./Refraction";
-import { Sparkles, GraduationCap, Zap, Play, X, ChevronRight, Navigation } from "lucide-react";
+import { Sparkles, GraduationCap, Zap, Play, X, ChevronRight, Navigation, MessageCircle } from "lucide-react";
 import { GuidedTour, TourStep } from "@/components/GuidedTour";
 
 const LENS_MIRROR_TOUR: TourStep[] = [
@@ -65,10 +65,20 @@ const SimulatorPage = () => {
   const [isExiting, setIsExiting] = useState(false);
   const [presetKey, setPresetKey] = useState(0);
   const [tourActive, setTourActive] = useState(false);
-  
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+
   // Determine type from search param OR pathname
   const typeParam = searchParams.get("type");
   const type = typeParam || (location.pathname.includes("refraction") ? "refraction" : "lens-mirror");
+
+  const SIM_NAMES: Record<string, string> = {
+    convexLens: "convex_lens", concaveLens: "concave_lens",
+    convexMirror: "convex_mirror", concaveMirror: "concave_mirror",
+    slab: "glass_slab", prism: "prism", stick: "stick_in_water",
+  };
+  const currentMode = searchParams.get("mode") || (type === "refraction" ? "slab" : "convexLens");
+  const simName = SIM_NAMES[currentMode] || currentMode;
+  const tallyUrl = `https://tally.so/r/RG87VJ?simulation_name=${simName}`;
 
   const handleTypeChange = (newType: string) => {
     // Start fresh — don't carry over params from the other experiment type
@@ -294,6 +304,87 @@ const SimulatorPage = () => {
           .main-tab-btn { font-size: 14px; padding: 10px 8px; }
           .intro-title { font-size: 24px; }
         }
+
+        /* Feedback FAB */
+        .feedback-fab {
+          position: fixed;
+          bottom: 28px; right: 24px;
+          z-index: 7500;
+          display: flex; align-items: center; gap: 7px;
+          background: rgba(255,255,255,0.92);
+          backdrop-filter: blur(10px);
+          border: 1px solid rgba(0,0,0,0.1);
+          border-radius: 50px;
+          padding: 10px 16px 10px 13px;
+          color: #374151;
+          font-size: 13px; font-weight: 600;
+          cursor: pointer;
+          box-shadow: 0 2px 14px rgba(0,0,0,0.11);
+          transition: transform 0.18s cubic-bezier(0.2,0.8,0.2,1), box-shadow 0.18s, background 0.15s;
+          font-family: inherit;
+        }
+        .feedback-fab:hover {
+          background: #fff;
+          box-shadow: 0 6px 24px rgba(0,0,0,0.17);
+          transform: translateY(-2px);
+        }
+        .feedback-fab:active { transform: scale(0.96); }
+        .feedback-fab-label { white-space: nowrap; }
+        @media (max-width: 540px) {
+          .feedback-fab {
+            bottom: 18px; right: 16px;
+            padding: 11px; border-radius: 50%;
+          }
+          .feedback-fab-label { display: none; }
+        }
+
+        /* Feedback Modal */
+        @keyframes _fdBdIn { from { opacity:0; } to { opacity:1; } }
+        @keyframes _fdCardIn {
+          from { transform: translateY(28px); opacity:0; }
+          to   { transform: translateY(0);    opacity:1; }
+        }
+        .feedback-modal-bd {
+          position: fixed; inset: 0;
+          background: rgba(17,24,39,0.65);
+          backdrop-filter: blur(5px);
+          z-index: 9980;
+          display: flex; align-items: center; justify-content: center;
+          padding: 16px;
+          animation: _fdBdIn 0.22s ease-out;
+        }
+        .feedback-modal-card {
+          background: #fff;
+          border-radius: 20px;
+          overflow: hidden;
+          width: 100%; max-width: 560px;
+          height: min(82vh, 660px);
+          display: flex; flex-direction: column;
+          box-shadow: 0 25px 60px rgba(0,0,0,0.22);
+          animation: _fdCardIn 0.28s cubic-bezier(0.16,1,0.3,1);
+        }
+        .feedback-modal-hdr {
+          display: flex; justify-content: space-between; align-items: center;
+          padding: 14px 18px;
+          border-bottom: 1px solid #F3F4F6;
+          flex-shrink: 0;
+        }
+        .feedback-modal-hdr span { font-weight: 700; font-size: 15px; color: #111827; font-family: inherit; }
+        .feedback-modal-hdr button {
+          background: none; border: none; cursor: pointer;
+          color: #9CA3AF; padding: 5px; border-radius: 7px;
+          display: flex; align-items: center;
+          transition: color 0.15s, background 0.15s;
+        }
+        .feedback-modal-hdr button:hover { color: #374151; background: #F3F4F6; }
+        .feedback-iframe { flex: 1; width: 100%; border: none; display: block; }
+        @media (max-width: 540px) {
+          .feedback-modal-bd { padding: 0; align-items: flex-end; }
+          .feedback-modal-card {
+            border-radius: 20px 20px 0 0;
+            height: 90vh; max-width: 100%;
+          }
+        }
       `}</style>
 
       {showIntro && (
@@ -397,6 +488,32 @@ const SimulatorPage = () => {
           <RayOptics key={`rayoptics-${presetKey}`} hideNav />
         )}
       </div>
+
+      {/* Feedback FAB — hidden while intro overlay or tour is active */}
+      {!showIntro && !tourActive && (
+        <button className="feedback-fab" onClick={() => setFeedbackOpen(true)} aria-label="মতামত জানাও">
+          <MessageCircle size={17} />
+          <span className="feedback-fab-label">তোমার মতামত জানাও</span>
+        </button>
+      )}
+
+      {/* Feedback Modal */}
+      {feedbackOpen && (
+        <div className="feedback-modal-bd" onClick={() => setFeedbackOpen(false)}>
+          <div className="feedback-modal-card" onClick={e => e.stopPropagation()}>
+            <div className="feedback-modal-hdr">
+              <span>তোমার মতামত জানাও</span>
+              <button onClick={() => setFeedbackOpen(false)} aria-label="বন্ধ করো"><X size={17} /></button>
+            </div>
+            <iframe
+              src={tallyUrl}
+              className="feedback-iframe"
+              title="Feedback Form"
+              allow="fullscreen"
+            />
+          </div>
+        </div>
+      )}
 
       <GuidedTour
         steps={type === "refraction" ? REFRACTION_TOUR : LENS_MIRROR_TOUR}
