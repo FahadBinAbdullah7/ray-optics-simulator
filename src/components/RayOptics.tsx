@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Microscope, FlaskConical, Target, X, RotateCcw, Chrome as Home, Lightbulb, Info, ChevronRight, Trophy, Star } from "lucide-react";
+import { useLang } from "@/context/LangContext";
 
 type Mode = "convexLens" | "concaveLens" | "convexMirror" | "concaveMirror";
 
@@ -232,6 +233,15 @@ export default function RayOptics({ hideNav = false }: { hideNav?: boolean }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { t, lang } = useLang();
+  const toNum = (n: number | string) => lang === "en" ? String(n) : toBn(n);
+  // locale-aware number formatter for display (uses Bengali digits in bn mode)
+  const fmtNumL = (n: number, decimals = 0) => {
+    if (!isFinite(n)) return "∞";
+    const sign = n < 0 ? "−" : n > 0 ? "+" : "";
+    const abs = Math.abs(n).toFixed(decimals);
+    return sign + (lang === "en" ? abs : toBn(abs));
+  };
   const queryMode = searchParams.get("mode") as Mode;
   const validModes = Object.keys(MODE_TO_PATH) as Mode[];
   const initialMode: Mode = queryMode && validModes.includes(queryMode)
@@ -299,6 +309,21 @@ export default function RayOptics({ hideNav = false }: { hideNav?: boolean }) {
   const layoutRef = useRef({ cx: 0, cy: 0, scale: 1, W: 0, H: 0, maxRange: 1 });
   const smoothURef = useRef(150);
 
+  // Quest translations lookup
+  const QUEST_EN: Record<number, { instruction: string; targetModeLabel: string; question: string; options: string[]; hint: string }> = {
+    1: { instruction: "Using a convex lens, place the object between F and 2F. Create a large, inverted image.", targetModeLabel: "Convex Lens", question: "Which device works at this position?", options: ["Projector","Camera","Magnifying Glass","Telescope"], hint: "Object is outside the focal length (81u)" },
+    2: { instruction: "Using a convex lens, place the object beyond 2F. Create a small, inverted image.", targetModeLabel: "Convex Lens", question: "This works like which device?", options: ["Flashlight","Projector","Camera","Magnifying Glass"], hint: "Place the object beyond 2F" },
+    3: { instruction: "Using a convex lens, place the object inside F. Observe a large, erect virtual image.", targetModeLabel: "Convex Lens", question: "What kind of image forms when the object is inside F?", options: ["Real & inverted","Virtual, erect & large","Same size","No image"], hint: "Works like a magnifying glass" },
+    4: { instruction: "Using a concave mirror, create a large image behind the mirror. (Bring object inside F)", targetModeLabel: "Concave Mirror", question: "Where does the image form inside F for a concave mirror?", options: ["In front of mirror","Behind mirror (virtual)","At infinity","At F"], hint: "Works like a makeup mirror" },
+    5: { instruction: "Place the object exactly at 2F in a convex lens. Create an equal-size, inverted image.", targetModeLabel: "Convex Lens", question: "What is the magnification (m) when the object is at 2F?", options: ["0.5×","1×","2×","∞"], hint: "When u = 2f, then v = 2f" },
+    6: { instruction: "Place the object exactly at F in a convex lens. See what happens!", targetModeLabel: "Convex Lens", question: "What happens when the object is at F?", options: ["Small image","Equal-size image","Rays become parallel — image at infinity","Inverted & large"], hint: "Principle of a flashlight" },
+    7: { instruction: "Use a concave lens. Place the object anywhere and observe the image type.", targetModeLabel: "Concave Lens", question: "What is the image always like in a concave lens?", options: ["Real & large","Virtual, erect & small","Same size","At infinity"], hint: "Used in glasses (myopia)" },
+    8: { instruction: "Use a convex mirror and observe the image.", targetModeLabel: "Convex Mirror", question: "Where is a convex mirror used?", options: ["In a projector","In car rear-view mirrors","In a camera","In a flashlight"], hint: "Shows a wide field of view" },
+    9: { instruction: "Place the object beyond 2F in a concave mirror.", targetModeLabel: "Concave Mirror", question: "What is the image like beyond 2F in a concave mirror?", options: ["Large & erect","Small, inverted & real","Same size","Virtual"], hint: "Like a camera" },
+    10: { instruction: "Place the object between F and 2F in a concave mirror.", targetModeLabel: "Concave Mirror", question: "What is the image like at this position?", options: ["Small & erect","Large, inverted & real","Virtual & small","Not formed"], hint: "Like a projector" },
+  };
+  const tq = (quest: Quest) => lang === "en" && QUEST_EN[quest.id] ? QUEST_EN[quest.id] : { instruction: quest.instruction, targetModeLabel: quest.targetModeLabel, question: quest.quiz.question, options: quest.quiz.options, hint: quest.hint };
+
   const modeInfo = MODES.find((m) => m.id === mode)!;
   const isLens = modeInfo.isLens;
   const u = -uMag;
@@ -332,7 +357,7 @@ export default function RayOptics({ hideNav = false }: { hideNav?: boolean }) {
 
   const isReal = isLens ? v > 0 : v < 0;
   const isErect = isLens ? mag > 0 : mag < 0;
-  const sizeText = Math.abs(mag) > 1.05 ? "বড়" : Math.abs(mag) < 0.95 ? "ছোট" : "সমান আকার";
+  const sizeText = Math.abs(mag) > 1.05 ? t("বড়", "Large") : Math.abs(mag) < 0.95 ? t("ছোট", "Small") : t("সমান আকার", "Same size");
 
   // Smooth drag interpolation
   useEffect(() => {
@@ -394,8 +419,8 @@ export default function RayOptics({ hideNav = false }: { hideNav?: boolean }) {
     const dpr = window.devicePixelRatio || 1;
     const W = canvas.width / dpr;
     const H = canvas.height / dpr;
-    drawUseCaseAnimation(ctx, W, H, showUseCase, useCaseAnim);
-  }, [showUseCase, useCaseAnim]);
+    drawUseCaseAnimation(ctx, W, H, showUseCase, useCaseAnim, t);
+  }, [showUseCase, useCaseAnim, t]);
 
   useEffect(() => {
     setAnimProgress(0);
@@ -799,7 +824,7 @@ export default function RayOptics({ hideNav = false }: { hideNav?: boolean }) {
       );
       ctx.restore();
     }
-  }, [mode, fMag, f, isLens, lightOn, animProgress, yObj, allRays]);
+  }, [mode, fMag, f, isLens, lightOn, animProgress, yObj, allRays, lang, t]);
 
   // Resize
   useEffect(() => {
@@ -911,38 +936,38 @@ export default function RayOptics({ hideNav = false }: { hideNav?: boolean }) {
   const { explanation, useCaseKey } = useMemo(() => {
     let exp = "";
     let key = "";
-    if (mode === "concaveLens") { exp = "অবতল লেন্সে সবসময় একই পাশে অভাসী, সোজা, ছোট প্রতিবিম্ব তৈরি হয়।"; key = "glasses"; }
-    else if (mode === "convexMirror") { exp = "উত্তল দর্পণে সবসময় আয়নার পেছনে অভাসী, সোজা, ছোট প্রতিবিম্ব। বড় দৃষ্টিক্ষেত্র।"; key = "rearview"; }
+    if (mode === "concaveLens") { exp = t("অবতল লেন্সে সবসময় একই পাশে অভাসী, সোজা, ছোট প্রতিবিম্ব তৈরি হয়।", "Concave lens always forms virtual, erect, small image on the same side."); key = "glasses"; }
+    else if (mode === "convexMirror") { exp = t("উত্তল দর্পণে সবসময় আয়নার পেছনে অভাসী, সোজা, ছোট প্রতিবিম্ব। বড় দৃষ্টিক্ষেত্র।", "Convex mirror always forms virtual, erect, small image behind the mirror. Wide field of view."); key = "rearview"; }
     else {
       const ratio = uMag / fMag;
       const isMirror = mode === "concaveMirror";
-      if (Math.abs(ratio - 1) < 0.05) { exp = isMirror ? "বস্তু ঠিক F-এ। প্রতিবিম্ব অসীমে — সমান্তরাল রশ্মি।" : "বস্তু ঠিক F-এ। রশ্মি সমান্তরাল হয়ে যায় — প্রতিবিম্ব অসীমে।"; key = "torch"; }
-      else if (ratio < 1) { exp = isMirror ? "বস্তু F-এর ভেতরে। প্রতিবিম্ব আয়নার পেছনে — অভাসী, সোজা, বড়।" : "বস্তু F-এর ভেতরে। প্রতিবিম্ব একই দিকে — অভাসী, সোজা, বড়।"; key = isMirror ? "shaving" : "magnifier"; }
-      else if (Math.abs(ratio - 2) < 0.05) { exp = "বস্তু ঠিক ২F-এ। প্রতিবিম্ব ঠিক ২F-এ — বাস্তব, উল্টো, সমান।"; key = "equal"; }
-      else if (ratio > 2) { exp = "বস্তু ২F-এর বাইরে। প্রতিবিম্ব F ও ২F-এর মাঝে — বাস্তব, উল্টো, ছোট।"; key = "camera"; }
-      else { exp = isMirror ? "বস্তু F ও ২F-এর মাঝে। প্রতিবিম্ব ২F-এর বাইরে — বাস্তব, উল্টো, বড়।" : "বস্তু F ও ২F-এর মাঝে। প্রতিবিম্ব ২F-এর বাইরে — বাস্তব, উল্টো, বড়।"; key = "projector"; }
+      if (Math.abs(ratio - 1) < 0.05) { exp = isMirror ? t("বস্তু ঠিক F-এ। প্রতিবিম্ব অসীমে — সমান্তরাল রশ্মি।", "Object at F. Rays become parallel — image at infinity.") : t("বস্তু ঠিক F-এ। রশ্মি সমান্তরাল হয়ে যায় — প্রতিবিম্ব অসীমে।", "Object at F. Rays become parallel — image at infinity."); key = "torch"; }
+      else if (ratio < 1) { exp = isMirror ? t("বস্তু F-এর ভেতরে। প্রতিবিম্ব আয়নার পেছনে — অভাসী, সোজা, বড়।", "Object inside F. Image on same side — virtual, erect, enlarged.") : t("বস্তু F-এর ভেতরে। প্রতিবিম্ব একই দিকে — অভাসী, সোজা, বড়।", "Object inside F. Image on same side — virtual, erect, enlarged."); key = isMirror ? "shaving" : "magnifier"; }
+      else if (Math.abs(ratio - 2) < 0.05) { exp = t("বস্তু ঠিক ২F-এ। প্রতিবিম্ব ঠিক ২F-এ — বাস্তব, উল্টো, সমান।", "Object at 2F. Image at 2F — real, inverted, same size."); key = "equal"; }
+      else if (ratio > 2) { exp = t("বস্তু ২F-এর বাইরে। প্রতিবিম্ব F ও ২F-এর মাঝে — বাস্তব, উল্টো, ছোট।", "Object beyond 2F. Image between F & 2F — real, inverted, small."); key = "camera"; }
+      else { exp = t("বস্তু F ও ২F-এর মাঝে। প্রতিবিম্ব ২F-এর বাইরে — বাস্তব, উল্টো, বড়।", "Object between F & 2F. Image beyond 2F — real, inverted, enlarged."); key = "projector"; }
     }
     return { explanation: exp, useCaseKey: key };
-  }, [mode, uMag, fMag]);
+  }, [mode, uMag, fMag, lang]);
 
   const currentUseCases = USE_CASES[useCaseKey] || [];
 
   const positionIndicator = useMemo(() => {
     if (mode === "concaveLens" || mode === "convexMirror") return "";
     const r = uMag / fMag;
-    if (Math.abs(r - 1) < 0.05) return "বস্তু F-এ";
-    if (r < 1) return "বস্তু F-এর ভেতরে";
-    if (Math.abs(r - 2) < 0.05) return "বস্তু 2F-এ";
-    if (r > 2) return "বস্তু 2F-এর বাইরে";
-    return "বস্তু F ও 2F-এর মাঝে";
-  }, [mode, uMag, fMag]);
+    if (Math.abs(r - 1) < 0.05) return t("বস্তু F-এ", "Object at F");
+    if (r < 1) return t("বস্তু F-এর ভেতরে", "Object inside F");
+    if (Math.abs(r - 2) < 0.05) return t("বস্তু 2F-এ", "Object at 2F");
+    if (r > 2) return t("বস্তু 2F-এর বাইরে", "Object beyond 2F");
+    return t("বস্তু F ও 2F-এর মাঝে", "Object between F and 2F");
+  }, [mode, uMag, fMag, lang]);
 
   const presets = [
-    { label: "অসীম দূরত্ব", calc: () => Math.min(340, fMag * 5) },
-    { label: "2F-এ বস্তু", calc: () => fMag * 2 },
-    { label: "F ও 2F-এর মাঝে", calc: () => Math.round(fMag * 1.5) },
-    { label: "F-এ বস্তু", calc: () => fMag },
-    { label: "F-এর ভেতরে", calc: () => Math.max(5, Math.round(fMag * 0.5)) },
+    { label: t("অসীম দূরত্ব", "Infinite Distance"), calc: () => Math.min(340, fMag * 5) },
+    { label: t("2F-এ বস্তু", "Object at 2F"), calc: () => fMag * 2 },
+    { label: t("F ও 2F-এর মাঝে", "Between F and 2F"), calc: () => Math.round(fMag * 1.5) },
+    { label: t("F-এ বস্তু", "Object at F"), calc: () => fMag },
+    { label: t("F-এর ভেতরে", "Inside F"), calc: () => Math.max(5, Math.round(fMag * 0.5)) },
   ];
 
   return (
@@ -953,7 +978,7 @@ export default function RayOptics({ hideNav = false }: { hideNav?: boolean }) {
       <div className="ro-header" style={{ position: "relative" }}>
         <div className="icon"><Microscope size={20} /></div>
         <div>
-          <h1 className="bn">লেন্স ও দর্পণ</h1>
+          <h1 className="bn">{t("লেন্স ও দর্পণ", "Lenses & Mirrors")}</h1>
           <p>Ray Optics: Lens & Mirror</p>
         </div>
         <div style={{ marginLeft: "auto" }}>
@@ -964,7 +989,7 @@ export default function RayOptics({ hideNav = false }: { hideNav?: boolean }) {
               else setLabMode("off");
             }}
           >
-            <FlaskConical size={14} /> {labMode === "off" ? "ল্যাব টেস্ট" : "টেস্ট শেষ করুন"}
+            <FlaskConical size={14} /> {labMode === "off" ? t("ল্যাব টেস্ট", "Lab Test") : t("টেস্ট শেষ করুন", "End Test")}
           </button>
         </div>
       </div>
@@ -974,11 +999,11 @@ export default function RayOptics({ hideNav = false }: { hideNav?: boolean }) {
         <div className="ro-card lab-overlay">
           <div className="lab-name-card">
             <div className="lab-name-icon"><FlaskConical size={40} /></div>
-            <h2 className="bn">ল্যাব টেস্ট শুরু করো!</h2>
-            <p className="bn">৫টি কুইজে সঠিক উত্তর দিয়ে পয়েন্ট অর্জন করো</p>
+            <h2 className="bn">{t("ল্যাব টেস্ট শুরু করো!", "Start Lab Test!")}</h2>
+            <p className="bn">{t("৫টি কুইজে সঠিক উত্তর দিয়ে পয়েন্ট অর্জন করো", "Answer 5 quizzes correctly to earn points")}</p>
             <input
               className="lab-name-input"
-              placeholder="তোমার নাম লেখো..."
+              placeholder={t("তোমার নাম লেখো...", "Enter your name...")}
               value={playerName}
               onChange={(e) => setPlayerName(e.target.value)}
               onKeyDown={(e) => {
@@ -1010,7 +1035,7 @@ export default function RayOptics({ hideNav = false }: { hideNav?: boolean }) {
                 setLabMode("playing");
               }}
             >
-              শুরু করো
+              {t("শুরু করো", "Start")}
             </button>
             
           </div>
@@ -1039,31 +1064,31 @@ export default function RayOptics({ hideNav = false }: { hideNav?: boolean }) {
               </div>
               <div>
                 <div className="quest-label">ACTIVE QUEST</div>
-                <div className="quest-title bn">কুইজ {toBn(labRound + 1)}/৫</div>
+                <div className="quest-title bn">{t("কুইজ", "Quiz")} {toNum(labRound + 1)}/{toNum(5)}</div>
               </div>
-              <div className="quest-score-badge">{toBn(labScore)} পয়েন্ট</div>
+              <div className="quest-score-badge">{toNum(labScore)} {t("পয়েন্ট", "Points")}</div>
             </div>
-            <div className="quest-instruction bn">"{quest.instruction}"</div>
+            <div className="quest-instruction bn">"{tq(quest).instruction}"</div>
             {!modeMatches && (
               <div className="quest-mode-hint bn">
-                প্রথমে "<strong>{quest.targetModeLabel}</strong>" সিলেক্ট করো ↓
+                {t("প্রথমে", "First select")} "<strong>{tq(quest).targetModeLabel}</strong>" {t("সিলেক্ট করো ↓", "↓")}
               </div>
             )}
             {modeMatches && !isInRange && (
               <div className="quest-mode-ok bn">
-                {quest.targetModeLabel} সিলেক্ট হয়েছে — এবার মোমবাতি সরাও!
+                {tq(quest).targetModeLabel} {t("সিলেক্ট হয়েছে — এবার মোমবাতি সরাও!", "selected — now move the candle!")}
               </div>
             )}
             <div className="quest-hint bn">
-              <span className="quest-hint-icon"><Info size={14} /></span> {quest.hint}
+              <span className="quest-hint-icon"><Info size={14} /></span> {tq(quest).hint}
             </div>
             {isInRange && !candleTouched && (
               <div className="quest-mode-hint bn">
-                মোমবাতিটিকে একবার ছুঁয়ে দেখো — তারপর কুইজ আসবে!
+                {t("মোমবাতিটিকে একবার ছুঁয়ে দেখো — তারপর কুইজ আসবে!", "Touch the candle once — then the quiz will appear!")}
               </div>
             )}
             {isInRange && candleTouched && (
-              <div className="quest-success-flash bn">সঠিক অবস্থান! কুইজ আসছে...</div>
+              <div className="quest-success-flash bn">{t("সঠিক অবস্থান! কুইজ আসছে...", "Correct position! Quiz coming...")}</div>
             )}
             
           </div>
@@ -1077,11 +1102,11 @@ export default function RayOptics({ hideNav = false }: { hideNav?: boolean }) {
           <div className="ro-card quiz-card">
             <div className="quiz-header">
               <span className="quiz-icon"><Info size={22} /></span>
-              <span className="quiz-round bn">প্রশ্ন {toBn(labRound + 1)}/৫</span>
+              <span className="quiz-round bn">{t("প্রশ্ন", "Question")} {toNum(labRound + 1)}/{toNum(5)}</span>
             </div>
-            <div className="quiz-question bn">{quest.quiz.question}</div>
+            <div className="quiz-question bn">{tq(quest).question}</div>
             <div className="quiz-options">
-              {quest.quiz.options.map((opt, i) => (
+              {tq(quest).options.map((opt, i) => (
                 <button
                   key={i}
                   className={
@@ -1121,7 +1146,7 @@ export default function RayOptics({ hideNav = false }: { hideNav?: boolean }) {
             </div>
             {answerResult && (
               <div className={"quiz-feedback bn " + answerResult}>
-                {answerResult === "correct" ? "সঠিক! +২০ পয়েন্ট" : "ভুল উত্তর"}
+                {answerResult === "correct" ? t("সঠিক! +২০ পয়েন্ট", "Correct! +20 points") : t("ভুল উত্তর", "Wrong answer")}
               </div>
             )}
           </div>
@@ -1133,10 +1158,10 @@ export default function RayOptics({ hideNav = false }: { hideNav?: boolean }) {
         <div className="ro-card result-card">
           <div className="result-trophy"><Trophy size={48} /></div>
           <h2 className="bn result-title">
-            {labScore >= 80 ? "অসাধারণ!" : labScore >= 40 ? "ভালো চেষ্টা!" : "আবার চেষ্টা করো!"}
+            {labScore >= 80 ? t("অসাধারণ!", "Excellent!") : labScore >= 40 ? t("ভালো চেষ্টা!", "Good try!") : t("আবার চেষ্টা করো!", "Try again!")}
           </h2>
           <div className="result-name bn">{playerName}</div>
-          <div className="result-score">{toBn(labScore)}<span>/১০০ পয়েন্ট</span></div>
+          <div className="result-score">{toNum(labScore)}<span>/{toNum(100)} {t("পয়েন্ট", "Points")}</span></div>
           <div className="result-stars">
             {[...Array(5)].map((_, i) => (
               <span key={i} className={i < labScore / 20 ? "star-filled" : "star-empty"}><Star size={20} /></span>
@@ -1153,8 +1178,8 @@ export default function RayOptics({ hideNav = false }: { hideNav?: boolean }) {
               setSelectedAnswer(null);
               setAnswerResult(null);
               setLabMode("playing");
-            }}>আবার খেলো</button>
-            <button className="lab-cancel-btn" onClick={() => { setLabMode("off"); }}>হোমে ফিরো</button>
+            }}>{t("আবার খেলো", "Play Again")}</button>
+            <button className="lab-cancel-btn" onClick={() => { setLabMode("off"); }}>{t("হোমে ফিরো", "Go Home")}</button>
           </div>
         </div>
       )}
@@ -1173,7 +1198,10 @@ export default function RayOptics({ hideNav = false }: { hideNav?: boolean }) {
                 if (!hideNav) navigate(MODE_TO_PATH[mm.id]);
               }}
             >
-              {mm.label}
+              {mm.id === "convexLens" ? t("উত্তল লেন্স", "Convex Lens")
+                : mm.id === "concaveLens" ? t("অবতল লেন্স", "Concave Lens")
+                : mm.id === "convexMirror" ? t("উত্তল দর্পণ", "Convex Mirror")
+                : t("অবতল দর্পণ", "Concave Mirror")}
             </button>
           ))}
         </div>
@@ -1191,7 +1219,7 @@ export default function RayOptics({ hideNav = false }: { hideNav?: boolean }) {
                 onPointerCancel={onPointerUp}
                 style={{ touchAction: "none", cursor: dragRef.current.active ? "grabbing" : "grab" }}
               />
-              <div className="canvas-hint bn">মোমবাতিকে ছুঁয়ে যেকোনো দিকে টেনে সরাও (অনুভূমিক ও উল্লম্ব)</div>
+              <div className="canvas-hint bn">{t("মোমবাতিকে ছুঁয়ে যেকোনো দিকে টেনে সরাও (অনুভূমিক ও উল্লম্ব)", "Touch the candle and drag in any direction (horizontal & vertical)")}</div>
             </div>
             <div className="action-row">
               <button
@@ -1201,25 +1229,25 @@ export default function RayOptics({ hideNav = false }: { hideNav?: boolean }) {
                   else { setLightOn(true); setAnimProgress(0); }
                 }}
               >
-                {lightOn ? "আলো নিভাও" : "মোমবাতি জ্বালাও"}
+                {lightOn ? t("আলো নিভাও", "Turn Off Light") : t("আলো জ্বালাও", "Turn On Light")}
               </button>
             </div>
             <div className="legend">
-              <span><i style={{ background: RAY_COLORS.ray1 }} /> সমান্তরাল রশ্মি</span>
-              <span><i style={{ background: RAY_COLORS.ray2 }} /> কেন্দ্রীয় রশ্মি</span>
-              <span><i style={{ background: RAY_COLORS.ray3 }} /> ফোকাস রশ্মি</span>
-              <span className="legend-dash">- - অভাসী</span>
+              <span><i style={{ background: RAY_COLORS.ray1 }} /> {t("সমান্তরাল রশ্মি", "Parallel ray")}</span>
+              <span><i style={{ background: RAY_COLORS.ray2 }} /> {t("কেন্দ্রীয় রশ্মি", "Central ray")}</span>
+              <span><i style={{ background: RAY_COLORS.ray3 }} /> {t("ফোকাস রশ্মি", "Focal ray")}</span>
+              <span className="legend-dash">- - {t("অভাসী", "Virtual")}</span>
             </div>
           </div>
         </div>
         <div className="experiment-controls">
           <div className="ro-card">
             <div className="slider-row">
-              <label><span>বস্তুর দূরত্ব (u)</span><span className="val">{fmtNum(u)} একক</span></label>
+              <label><span>{t("বস্তুর দূরত্ব (u)", "Object Distance (u)")}</span><span className="val">{fmtNumL(u)} {t("একক", "units")}</span></label>
               <input type="range" min={5} max={350} value={uMag} onChange={(e) => setUMag(+e.target.value)} />
             </div>
             <div className="slider-row">
-              <label><span>ফোকাস দূরত্ব (f)</span><span className="val">{fmtNum(f)} একক</span></label>
+              <label><span>{t("ফোকাস দূরত্ব (f)", "Focal Length (f)")}</span><span className="val">{fmtNumL(f)} {t("একক", "units")}</span></label>
               <input type="range" min={20} max={150} value={fMag} onChange={(e) => setFMag(+e.target.value)} />
             </div>
             {positionIndicator && <span className="pos-indicator bn">{positionIndicator}</span>}
@@ -1235,7 +1263,7 @@ export default function RayOptics({ hideNav = false }: { hideNav?: boolean }) {
           </div>
           <div className="ro-card ctrl-toggles-card">
             <div className="ctrl-toggle-row">
-              <span className="ctrl-toggle-label bn">সব রশ্মি</span>
+              <span className="ctrl-toggle-label bn">{t("সব রশ্মি", "All Rays")}</span>
               <button
                 className={"ctrl-toggle-switch " + (allRays ? "on" : "")}
                 onClick={() => { setAllRays(v => !v); setAnimProgress(0); }}
@@ -1245,7 +1273,7 @@ export default function RayOptics({ hideNav = false }: { hideNav?: boolean }) {
               </button>
             </div>
             <div className="ctrl-toggle-row">
-              <span className="ctrl-toggle-label bn">আবার</span>
+              <span className="ctrl-toggle-label bn">{t("আবার", "Reset")}</span>
               <button
                 className="ctrl-reset-toggle"
                 onClick={() => { setAnimProgress(0); setYObj(50); }}
@@ -1267,7 +1295,7 @@ export default function RayOptics({ hideNav = false }: { hideNav?: boolean }) {
             }, 50);
           }}
         >
-          এই পরীক্ষার বাস্তব ব্যবহার দেখো →
+          {t("এই পরীক্ষার বাস্তব ব্যবহার দেখো →", "See real-world applications of this experiment →")}
         </button>
       )}
 
@@ -1292,42 +1320,70 @@ export default function RayOptics({ hideNav = false }: { hideNav?: boolean }) {
         <div className="formula-values">
           <div className="fv-row">
             <div className="fraction small">
-              <span className="num">১</span>
-              <span className="den">{isFinite(v) ? fmtNum(v, 1) : "∞"}</span>
+              <span className="num">{toNum(1)}</span>
+              <span className="den">{isFinite(v) ? fmtNumL(v, 1) : "∞"}</span>
             </div>
             <span className="op">{isLens ? "−" : "+"}</span>
             <div className="fraction small">
-              <span className="num">১</span>
-              <span className="den">{fmtNum(u)}</span>
+              <span className="num">{toNum(1)}</span>
+              <span className="den">{fmtNumL(u)}</span>
             </div>
             <span className="op">=</span>
             <div className="fraction small">
-              <span className="num">১</span>
-              <span className="den">{fmtNum(f)}</span>
+              <span className="num">{toNum(1)}</span>
+              <span className="den">{fmtNumL(f)}</span>
             </div>
           </div>
         </div>
         <div className="data-rows">
-          <div className="row"><span className="k">বস্তুর দূরত্ব (u)</span><span className="v">{fmtNum(u)}</span></div>
-          <div className="row"><span className="k">ফোকাস দূরত্ব (f)</span><span className="v">{fmtNum(f)}</span></div>
-          <div className="row"><span className="k">প্রতিবিম্বের দূরত্ব (v)</span><span className="v">{isFinite(v) ? fmtNum(v, 1) : "∞"}</span></div>
-          <div className="row"><span className="k">বিবর্ধন (m)</span><span className="v">{isFinite(mag) ? fmtNum(mag, 2) + "×" : "∞"}</span></div>
-          <div className="row"><span className="k">প্রতিবিম্বের ধরন</span><span className="v bn">{isFinite(v) ? `${isReal ? "বাস্তব" : "অভাসী"}, ${isErect ? "সোজা" : "উল্টো"}, ${sizeText}` : "তৈরি হয় না"}</span></div>
+          <div className="row"><span className="k">{t("বস্তুর দূরত্ব (u)", "Object Distance (u)")}</span><span className="v">{fmtNumL(u)}</span></div>
+          <div className="row"><span className="k">{t("ফোকাস দূরত্ব (f)", "Focal Length (f)")}</span><span className="v">{fmtNumL(f)}</span></div>
+          <div className="row"><span className="k">{t("প্রতিবিম্বের দূরত্ব (v)", "Image Distance (v)")}</span><span className="v">{isFinite(v) ? fmtNumL(v, 1) : "∞"}</span></div>
+          <div className="row"><span className="k">{t("বিবর্ধন (m)", "Magnification (m)")}</span><span className="v">{isFinite(mag) ? fmtNumL(mag, 2) + "×" : "∞"}</span></div>
+          <div className="row"><span className="k">{t("প্রতিবিম্বের ধরন", "Image Type")}</span><span className="v bn">{isFinite(v) ? `${isReal ? t("বাস্তব", "Real") : t("অভাসী", "Virtual")}, ${isErect ? t("সোজা", "Erect") : t("উল্টো", "Inverted")}, ${sizeText}` : t("তৈরি হয় না", "At infinity")}</span></div>
         </div>
       </div>
 
       {/* LEARNING OUTCOMES STICKY SECTION */}
       {(() => {
         const outcome = LEARNING_OUTCOMES[mode];
+        const outcomeTitle = mode === "convexLens" ? t("উত্তল লেন্স", "Convex Lens")
+          : mode === "concaveLens" ? t("অবতল লেন্স", "Concave Lens")
+          : mode === "convexMirror" ? t("উত্তল দর্পণ", "Convex Mirror")
+          : t("অবতল দর্পণ", "Concave Mirror");
+        const outcomeMessage = mode === "convexLens"
+          ? t("উত্তল লেন্স নিয়ে শিখলে তুমি বুঝবে কীভাবে ক্যামেরা এবং প্রজেক্টর কাজ করে।", "Learning about convex lenses will help you understand how cameras and projectors work.")
+          : mode === "concaveLens"
+          ? t("অবতল লেন্স সবসময় ছোট এবং সোজা প্রতিবিম্ব তৈরি করে।", "Concave lenses always form a small, erect virtual image.")
+          : mode === "convexMirror"
+          ? t("উত্তল দর্পণ গাড়ির পেছনের আয়নায় ব্যবহৃত হয় বিস্তৃত দৃশ্য দেখার জন্য।", "Convex mirrors are used as car rear-view mirrors for a wide field of view.")
+          : t("অবতল দর্পণ বিভিন্ন ধরনের প্রতিবিম্ব তৈরি করে যা বস্তুর অবস্থানের উপর নির্ভর করে।", "Concave mirrors form different types of images depending on the object's position.");
+        const outcomeTips: string[] = mode === "convexLens" ? [
+          t("বস্তু ২F-এর বাইরে রাখলে ছোট উল্টো প্রতিবিম্ব হয় (ক্যামেরার মতো)", "Object beyond 2F → small, inverted image (like a camera)"),
+          t("বস্তু F-এর মধ্যে রাখলে বড় সোজা প্রতিবিম্ব হয় (ম্যাগনিফাইং গ্লাসের মতো)", "Object inside F → large, erect image (like a magnifying glass)"),
+          t("বস্তু F এবং ২F-এর মধ্যে রাখলে বড় উল্টো প্রতিবিম্ব হয় (প্রজেক্টরের মতো)", "Object between F and 2F → large, inverted image (like a projector)"),
+        ] : mode === "concaveLens" ? [
+          t("অবতল লেন্স কখনও বাস্তব প্রতিবিম্ব তৈরি করে না", "Concave lenses never form a real image"),
+          t("এটি চশমায় ব্যবহৃত হয় যারা কাছের জিনিস ভালো দেখতে পায় না", "Used in glasses for people with myopia (nearsightedness)"),
+          t("প্রতিবিম্ব সবসময় অভাসী এবং সোজা থাকে", "Image is always virtual and erect"),
+        ] : mode === "convexMirror" ? [
+          t("উত্তল দর্পণ সবসময় ছোট এবং সোজা প্রতিবিম্ব তৈরি করে", "Convex mirrors always form small, erect images"),
+          t("এটি ব্যাপক ক্ষেত্র দৃশ্যমান করতে পারে", "They show a wide field of view"),
+          t("প্রতিবিম্ব সবসময় দর্পণের পেছনে থাকে", "The image is always behind the mirror"),
+        ] : [
+          t("বস্তু F-এর মধ্যে রাখলে বড় সোজা প্রতিবিম্ব হয় (মেকআপ আয়নার মতো)", "Object inside F → large, erect image (like a makeup mirror)"),
+          t("বস্তু F এবং ২F-এর মধ্যে রাখলে বড় উল্টো প্রতিবিম্ব হয় (প্রজেক্টরের মতো)", "Object between F and 2F → large, inverted image (like a projector)"),
+          t("বস্তু ২F-এর বাইরে রাখলে ছোট উল্টো প্রতিবিম্ব হয় (টেলিস্কোপের মতো)", "Object beyond 2F → small, inverted image (like a telescope)"),
+        ];
         return (
           <div className="learning-outcomes-section">
             <div className="learning-header">
               <div className="learning-icon"><Lightbulb size={18} /></div>
-              <div className="learning-title bn">এই উপকরণ সম্পর্কে শিখুন:</div>
+              <div className="learning-title bn">{t("এই উপকরণ সম্পর্কে শিখুন:", `About ${outcomeTitle}:`)}</div>
             </div>
-            <p className="learning-message bn">{outcome.message}</p>
+            <p className="learning-message bn">{outcomeMessage}</p>
             <div className="learning-tips-grid">
-              {outcome.tips.map((tip, i) => (
+              {outcomeTips.map((tip, i) => (
                 <div key={i} className="learning-tip-item bn">
                   <div className="tip-icon">{i + 1}</div>
                   <div className="tip-text">{tip}</div>
@@ -1342,34 +1398,68 @@ export default function RayOptics({ hideNav = false }: { hideNav?: boolean }) {
       <div className="ro-card explain-card-v2">
         <div className="explain-header">
           <div className="explain-icon-pulse"><Info size={20} /></div>
-          <div className="explain-title bn">এই অবস্থায় কী হচ্ছে:</div>
+          <div className="explain-title bn">{t("এই অবস্থায় কী হচ্ছে:", "What's happening at this position:")}</div>
         </div>
         <div className="explain-body bn">{explanation}</div>
 
         {labMode === "off" && currentUseCases.length > 0 && (
           <div id="use-case-section" className="use-case-section">
-            <div className="use-case-label bn">ব্যবহার (Use Case)</div>
+            <div className="use-case-label bn">{t("ব্যবহার (Use Case)", "Use Cases")}</div>
             <div className="use-case-cards">
-              {currentUseCases.map((uc, i) => (
-                <button
-                  key={i}
-                  className={"use-case-card" + (showUseCase === uc.animation ? " active" : "")}
-                  onClick={() => setShowUseCase(showUseCase === uc.animation ? null : uc.animation)}
-                >
-                  <span className="uc-icon">{uc.title.charAt(0)}</span>
-                  <div>
-                    <div className="uc-title bn">{uc.title}</div>
-                    <div className="uc-desc bn">{uc.desc}</div>
-                  </div>
-                  <span className="uc-arrow"><ChevronRight size={12} className={showUseCase === uc.animation ? "rotate-90" : ""} /></span>
-                </button>
-              ))}
+              {currentUseCases.map((uc, i) => {
+                const ucTitle = uc.icon === "projector" ? t("প্রজেক্টর", "Projector")
+                  : uc.icon === "camera" ? t("ক্যামেরা", "Camera")
+                  : uc.icon === "magnifier" ? t("ম্যাগনিফাইং গ্লাস", "Magnifying Glass")
+                  : uc.icon === "torch" ? t("টর্চলাইট", "Flashlight")
+                  : uc.icon === "glasses" ? t("চশমা (Myopia)", "Glasses (Myopia)")
+                  : uc.icon === "rearview" ? t("গাড়ির পেছনের আয়না", "Car Rear-view Mirror")
+                  : uc.icon === "shaving" ? t("মেকআপ আয়না", "Makeup Mirror")
+                  : uc.icon === "equal" ? t("সমান প্রতিবিম্ব", "Equal-size Image")
+                  : uc.title;
+                const ucDesc = uc.icon === "projector" ? t("ছোট স্লাইড থেকে বড় পর্দায় ছবি তৈরি করে", "Creates large picture from a small slide on screen")
+                  : uc.icon === "camera" ? t("বড় দৃশ্য থেকে ছোট ফিল্মে ছবি ধরে", "Captures a large scene onto a small film/sensor")
+                  : uc.icon === "magnifier" ? t("ছোট জিনিস বড় করে দেখায়", "Makes small objects appear larger")
+                  : uc.icon === "torch" ? t("আলো সমান্তরাল রশ্মিতে পাঠায়", "Sends light as parallel rays")
+                  : uc.icon === "glasses" ? t("দূরের জিনিস স্পষ্ট দেখায়", "Shows distant objects clearly")
+                  : uc.icon === "rearview" ? t("পিছনের বড় দৃষ্টিক্ষেত্র এক ছোট আয়নায় দেখায়", "Shows a wide rear view in a small mirror")
+                  : uc.icon === "shaving" ? t("মুখ বড় করে দেখায়", "Makes face appear larger")
+                  : uc.icon === "equal" ? t("বস্তুর সমান আকারের উল্টো ছবি", "Equal-size inverted image of the object")
+                  : uc.desc;
+                return (
+                  <button
+                    key={i}
+                    className={"use-case-card" + (showUseCase === uc.animation ? " active" : "")}
+                    onClick={() => setShowUseCase(showUseCase === uc.animation ? null : uc.animation)}
+                  >
+                    <span className="uc-icon">{ucTitle.charAt(0)}</span>
+                    <div>
+                      <div className="uc-title bn">{ucTitle}</div>
+                      <div className="uc-desc bn">{ucDesc}</div>
+                    </div>
+                    <span className="uc-arrow"><ChevronRight size={12} className={showUseCase === uc.animation ? "rotate-90" : ""} /></span>
+                  </button>
+                );
+              })}
             </div>
             {showUseCase && (
               <div className="use-case-animation">
                 <canvas ref={useCaseCanvasRef} />
                 <div className="uc-anim-label bn">
-                  {currentUseCases.find(c => c.animation === showUseCase)?.title} — অ্যানিমেশন
+                  {(() => {
+                    const uc = currentUseCases.find(c => c.animation === showUseCase);
+                    const animTitle = uc ? (
+                      uc.icon === "projector" ? t("প্রজেক্টর", "Projector")
+                      : uc.icon === "camera" ? t("ক্যামেরা", "Camera")
+                      : uc.icon === "magnifier" ? t("ম্যাগনিফাইং গ্লাস", "Magnifying Glass")
+                      : uc.icon === "torch" ? t("টর্চলাইট", "Flashlight")
+                      : uc.icon === "glasses" ? t("চশমা (Myopia)", "Glasses (Myopia)")
+                      : uc.icon === "rearview" ? t("গাড়ির পেছনের আয়না", "Car Rear-view Mirror")
+                      : uc.icon === "shaving" ? t("মেকআপ আয়না", "Makeup Mirror")
+                      : uc.icon === "equal" ? t("সমান প্রতিবিম্ব", "Equal-size Image")
+                      : uc.title
+                    ) : "";
+                    return `${animTitle} — ${t("অ্যানিমেশন", "Animation")}`;
+                  })()}
                 </div>
               </div>
             )}
@@ -1577,7 +1667,7 @@ function drawRealisticCandle(
 }
 
 // ============== Use Case Animation Drawing ==============
-function drawUseCaseAnimation(ctx: CanvasRenderingContext2D, W: number, H: number, type: string, t: number) {
+function drawUseCaseAnimation(ctx: CanvasRenderingContext2D, W: number, H: number, type: string, t: number, tr: (bn: string, en: string) => string) {
   // Dark background
   const bg = ctx.createLinearGradient(0, 0, W, H);
   bg.addColorStop(0, "#0D1525");
@@ -1691,8 +1781,8 @@ function drawUseCaseAnimation(ctx: CanvasRenderingContext2D, W: number, H: numbe
       ctx.fillStyle = "rgba(255,255,255,0.8)";
       ctx.font = "bold 11px sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText("ছোট স্লাইড ↑", 55, H - 8);
-      ctx.fillText("বড় উল্টো প্রতিবিম্ব ↓", screenX - 10, H - 8);
+      ctx.fillText(tr("ছোট স্লাইড ↑", "Small slide ↑"), 55, H - 8);
+      ctx.fillText(tr("বড় উল্টো প্রতিবিম্ব ↓", "Large inverted image ↓"), screenX - 10, H - 8);
       break;
     }
     case "camera": {
@@ -1789,8 +1879,8 @@ function drawUseCaseAnimation(ctx: CanvasRenderingContext2D, W: number, H: numbe
       ctx.fillStyle = "rgba(255,255,255,0.8)";
       ctx.font = "bold 11px sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText("বড় দৃশ্য ↑", 42, H - 8);
-      ctx.fillText("ছোট উল্টো ছবি ↓", camX + 30, H - 8);
+      ctx.fillText(tr("বড় দৃশ্য ↑", "Large scene ↑"), 42, H - 8);
+      ctx.fillText(tr("ছোট উল্টো ছবি ↓", "Small inverted image ↓"), camX + 30, H - 8);
       break;
     }
     case "magnifier": {
@@ -1798,7 +1888,7 @@ function drawUseCaseAnimation(ctx: CanvasRenderingContext2D, W: number, H: numbe
       ctx.fillStyle = "rgba(255,255,255,0.55)";
       ctx.font = "9px sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText("ক্ষুদ্র অক্ষর", 55, cy + 3);
+      ctx.fillText(tr("ক্ষুদ্র অক্ষর", "Tiny text"), 55, cy + 3);
 
       // Magnifying glass
       const lensX = W / 2 + 10;
@@ -1823,11 +1913,11 @@ function drawUseCaseAnimation(ctx: CanvasRenderingContext2D, W: number, H: numbe
       // Magnified upright text inside lens
       ctx.fillStyle = "rgba(255,255,255,0.95)";
       ctx.font = "bold 22px sans-serif";
-      ctx.fillText("অ", lensX, cy + 8 + bounce);
+      ctx.fillText(tr("অ", "A"), lensX, cy + 8 + bounce);
 
       ctx.fillStyle = "rgba(255,255,255,0.8)";
       ctx.font = "bold 11px sans-serif";
-      ctx.fillText("বড়, সোজা, অভাসী প্রতিবিম্ব", W / 2, H - 8);
+      ctx.fillText(tr("বড়, সোজা, অভাসী প্রতিবিম্ব", "Large, erect, virtual image"), W / 2, H - 8);
       break;
     }
     case "torch": {
@@ -1864,7 +1954,7 @@ function drawUseCaseAnimation(ctx: CanvasRenderingContext2D, W: number, H: numbe
       ctx.fillStyle = "rgba(255,255,255,0.8)";
       ctx.font = "bold 11px sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText("সমান্তরাল আলোর রশ্মি", W / 2, H - 8);
+      ctx.fillText(tr("সমান্তরাল আলোর রশ্মি", "Parallel light rays"), W / 2, H - 8);
       break;
     }
     case "glasses": {
@@ -1975,8 +2065,8 @@ function drawUseCaseAnimation(ctx: CanvasRenderingContext2D, W: number, H: numbe
       ctx.fillStyle = "rgba(255,255,255,0.85)";
       ctx.font = "bold 11px sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText("অবতল লেন্স", lx, H - 24);
-      ctx.fillText("রেটিনায় স্পষ্ট ফোকাস (মায়োপিয়া সংশোধন)", W / 2, H - 8);
+      ctx.fillText(tr("অবতল লেন্স", "Concave lens"), lx, H - 24);
+      ctx.fillText(tr("রেটিনায় স্পষ্ট ফোকাস (মায়োপিয়া সংশোধন)", "Clear focus on retina (myopia correction)"), W / 2, H - 8);
       break;
     }
     case "rearview": {
@@ -2075,7 +2165,7 @@ function drawUseCaseAnimation(ctx: CanvasRenderingContext2D, W: number, H: numbe
       ctx.fillStyle = "rgba(255,255,255,0.85)";
       ctx.font = "bold 11px sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText("বড় দৃষ্টিক্ষেত্র (উত্তল দর্পণ)", W / 2, H - 8);
+      ctx.fillText(tr("বড় দৃষ্টিক্ষেত্র (উত্তল দর্পণ)", "Wide field of view (convex mirror)"), W / 2, H - 8);
       break;
     }
     case "shaving": {
@@ -2182,8 +2272,8 @@ function drawUseCaseAnimation(ctx: CanvasRenderingContext2D, W: number, H: numbe
       ctx.fillStyle = "rgba(255,255,255,0.85)";
       ctx.font = "bold 11px sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText("মুখ", faceX, H - 8);
-      ctx.fillText("বড়, সোজা, অভাসী প্রতিবিম্ব", W - 60, H - 8);
+      ctx.fillText(tr("মুখ", "Face"), faceX, H - 8);
+      ctx.fillText(tr("বড়, সোজা, অভাসী প্রতিবিম্ব", "Large, erect, virtual image"), W - 60, H - 8);
       break;
     }
     case "equal": {
@@ -2193,7 +2283,7 @@ function drawUseCaseAnimation(ctx: CanvasRenderingContext2D, W: number, H: numbe
       ctx.fillStyle = "rgba(255,255,255,0.7)";
       ctx.font = "10px sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText("বস্তু", 55, cy + 50);
+      ctx.fillText(tr("বস্তু", "Object"), 55, cy + 50);
 
       // Lens at center
       ctx.strokeStyle = "rgba(180,220,255,0.8)";
@@ -2209,14 +2299,14 @@ function drawUseCaseAnimation(ctx: CanvasRenderingContext2D, W: number, H: numbe
       ctx.fillStyle = `rgba(200,100,100,${0.7 * flip})`;
       ctx.fillRect(W - 60, cy - 30 * flip, 10, 60 * flip);
       ctx.fillStyle = `rgba(255,255,255,${0.7 * flip})`;
-      ctx.fillText("প্রতিবিম্ব", W - 55, cy + 50);
+      ctx.fillText(tr("প্রতিবিম্ব", "Image"), W - 55, cy + 50);
       break;
     }
     default:
       ctx.fillStyle = "rgba(255,255,255,0.5)";
       ctx.font = "14px sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText("অ্যানিমেশন লোড হচ্ছে...", W / 2, cy);
+      ctx.fillText(tr("অ্যানিমেশন লোড হচ্ছে...", "Loading animation..."), W / 2, cy);
   }
 }
 
