@@ -7,10 +7,12 @@ import Index from "./pages/Index.tsx";
 import Refraction from "./pages/Refraction.tsx";
 import SimulatorPage from "./pages/SimulatorPage.tsx";
 import NotFound from "./pages/NotFound.tsx";
+import { LangProvider } from "./context/LangContext.tsx";
 
 const queryClient = new QueryClient();
 
 const App = () => (
+  <LangProvider>
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
@@ -34,6 +36,7 @@ const App = () => (
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
+  </LangProvider>
 );
 
 export default App;
