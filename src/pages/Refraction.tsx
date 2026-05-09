@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import SiteNav from "@/components/SiteNav";
 import { Microscope, Play, Pause, Info, Plus, Trash2, Lightbulb } from "lucide-react";
+import { useLang } from "@/context/LangContext";
 
 type Mode = "slab" | "prism" | "stick";
 
@@ -9,39 +10,63 @@ type Mode = "slab" | "prism" | "stick";
 interface LearningOutcome {
   mode: Mode;
   title: string;
+  titleEn: string;
   message: string;
+  messageEn: string;
   tips: string[];
+  tipsEn: string[];
 }
 
 const LEARNING_OUTCOMES: Record<Mode, LearningOutcome> = {
   slab: {
     mode: "slab",
     title: "কাঁচের স্ল্যাব",
+    titleEn: "Glass Slab",
     message: "কাঁচের স্ল্যাব দিয়ে আলো বাঁকা হয় কারণ বিভিন্ন মাধ্যমে আলোর গতি ভিন্ন।",
+    messageEn: "Light bends through a glass slab because light travels at different speeds in different media.",
     tips: [
       "আলো ঘন মাধ্যমে প্রবেশ করলে গতি কমে এবং স্বাভাবিক থেকে দূরে সরে",
       "প্রতিসরণ সূত্র: n₁sin(i) = n₂sin(r) (স্নেলের সূত্র)",
       "সমান্তরাল স্ল্যাব থেকে বেরিয়ে আসা আলো আগের দিকে সমান্তরাল থাকে, শুধু স্থানান্তরিত হয়",
     ],
+    tipsEn: [
+      "Light slows and bends toward the normal when entering a denser medium",
+      "Refraction formula: n₁sin(i) = n₂sin(r) (Snell's Law)",
+      "Light exiting a parallel slab stays parallel — only laterally displaced",
+    ],
   },
   prism: {
     mode: "prism",
     title: "প্রিজম",
+    titleEn: "Prism",
     message: "প্রিজম আলোকে বিভিন্ন রঙে বিচ্ছুরিত করে কারণ বিভিন্ন রঙের তরঙ্গদৈর্ঘ্য ভিন্ন।",
+    messageEn: "A prism disperses light into different colors because different colors have different wavelengths.",
     tips: [
       "বেগুনি আলো বেশি বাঁকে (কম তরঙ্গদৈর্ঘ্য), লাল আলো কম বাঁকে",
       "প্রিজম দিয়ে সাদা আলো বিচ্ছুরিত হয়ে রংধনুর রঙ তৈরি করে",
       "ন্যূনতম বিচ্লন কোণে প্রিজমের মধ্য দিয়ে আলো সমান কোণে প্রবেশ ও বেরিয়ে যায়",
     ],
+    tipsEn: [
+      "Violet bends more (shorter wavelength), red bends less",
+      "White light through a prism creates rainbow colors",
+      "At minimum deviation, light enters and exits the prism at equal angles",
+    ],
   },
   stick: {
     mode: "stick",
     title: "জল ও লাঠি",
+    titleEn: "Stick in Water",
     message: "পানিতে ডোবানো লাঠি বাঁকা দেখায় কারণ পানি ও বাতাসের প্রতিসরণাঙ্ক ভিন্ন।",
+    messageEn: "A stick in water appears bent because water and air have different refractive indices.",
     tips: [
       "পানির প্রতিসরণাঙ্ক ≈ ১.৩৩, বাতাসের ≈ ১",
       "পানি থেকে বেরিয়ে আসা আলো বেঁকে যায়, যা লাঠিকে বাঁকা দেখায়",
       "এই প্রভাব তীরন্দাজ এবং মাছ ধরার সময় গুরুত্বপূর্ণ",
+    ],
+    tipsEn: [
+      "Refractive index of water ≈ 1.33, air ≈ 1",
+      "Light bends when exiting water, making the stick appear bent",
+      "This effect matters in archery and fishing",
     ],
   },
 };
@@ -220,6 +245,7 @@ const REF_MODE_TO_PATH: Record<Mode, string> = {
 };
 
 const Refraction = ({ hideNav = false }: { hideNav?: boolean }) => {
+  const { t, lang } = useLang();
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
@@ -283,7 +309,7 @@ const Refraction = ({ hideNav = false }: { hideNav?: boolean }) => {
     params.set("angle", angleDeg.toString());
     params.set("n", n.toFixed(2));
     params.set("t", thickness.toString());
-    
+
     // Only update if something actually changed to avoid infinite loops
     if (params.toString() !== searchParams.toString()) {
       setSearchParams(params, { replace: true });
@@ -366,7 +392,7 @@ const Refraction = ({ hideNav = false }: { hideNav?: boolean }) => {
       ctx.fillStyle = "rgba(255,255,255,0.45)";
       ctx.font = "12px Inter, sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText(`কাঁচের স্ল্যাব  (n = ${n.toFixed(2)})`, (slabLeft + slabRight) / 2, slabTop - 10);
+      ctx.fillText(`${t("কাঁচের স্ল্যাব", "Glass Slab")}  (n = ${n.toFixed(2)})`, (slabLeft + slabRight) / 2, slabTop - 10);
 
       const theta1 = (angleDeg * Math.PI) / 180;
       const sinTheta2 = Math.sin(theta1) / n;
@@ -866,7 +892,7 @@ const Refraction = ({ hideNav = false }: { hideNav?: boolean }) => {
       ctx.stroke();
       ctx.fillStyle = "rgba(180,220,255,0.9)";
       ctx.font = "12px 'Hind Siliguri', sans-serif";
-      ctx.fillText("পানির পৃষ্ঠ", glassRight + 16, waterTop + 4);
+      ctx.fillText(t("পানির পৃষ্ঠ", "Water Surface"), glassRight + 16, waterTop + 4);
       ctx.restore();
 
       // Stick geometry driven by sliders
@@ -1033,7 +1059,7 @@ const Refraction = ({ hideNav = false }: { hideNav?: boolean }) => {
       ctx.fill();
       ctx.fillStyle = "#fff";
       ctx.font = "12px 'Hind Siliguri', sans-serif";
-      ctx.fillText("পর্যবেক্ষক", eyeX - 28, eyeY + eyeRy + 14);
+      ctx.fillText(t("পর্যবেক্ষক", "Observer"), eyeX - 28, eyeY + eyeRy + 14);
       ctx.restore();
 
       // Legend box — top-left corner, color-coded line samples
@@ -1043,7 +1069,9 @@ const Refraction = ({ hideNav = false }: { hideNav?: boolean }) => {
       const lineLen = Math.max(18, 24 * drawScale);
       const pad = 8;
       const rowH = fontSize + 10;
-      const legendLabelW = ctx.measureText("আপাত অবস্থান").width;
+      const apparentLabel = t("আপাত অবস্থান", "Apparent Position");
+      const realLabel = t("প্রকৃত অবস্থান", "Real Position");
+      const legendLabelW = Math.max(ctx.measureText(apparentLabel).width, ctx.measureText(realLabel).width);
       const legendW = pad + lineLen + 6 + legendLabelW + pad;
       const legendH = pad + rowH * 2 + pad * 0.5;
       const lx = 12;
@@ -1068,7 +1096,7 @@ const Refraction = ({ hideNav = false }: { hideNav?: boolean }) => {
       ctx.lineTo(lx + pad + lineLen, r1y);
       ctx.stroke();
       ctx.fillStyle = "#E0A45C";
-      ctx.fillText("আপাত অবস্থান", lx + pad + lineLen + 6, r1y);
+      ctx.fillText(apparentLabel, lx + pad + lineLen + 6, r1y);
       // Row 2 — real position (dashed brown)
       const r2y = ly + pad + rowH * 1.5 - 1;
       ctx.strokeStyle = "rgba(201,139,75,0.9)";
@@ -1080,14 +1108,14 @@ const Refraction = ({ hideNav = false }: { hideNav?: boolean }) => {
       ctx.stroke();
       ctx.setLineDash([]);
       ctx.fillStyle = "rgba(220,160,95,1)";
-      ctx.fillText("প্রকৃত অবস্থান", lx + pad + lineLen + 6, r2y);
+      ctx.fillText(realLabel, lx + pad + lineLen + 6, r2y);
       ctx.textBaseline = "alphabetic";
       ctx.restore();
       // Light ray label along the ray path
       ctx.save();
       ctx.font = `${Math.max(10, Math.round(11 * drawScale))}px 'Hind Siliguri', sans-serif`;
       ctx.fillStyle = "rgba(255,230,120,0.92)";
-      ctx.fillText("আলোর পথ", (refractX + eyeX) / 2 - 30, (refractY + eyeY) / 2 - 6);
+      ctx.fillText(t("আলোর পথ", "Path of Light"), (refractX + eyeX) / 2 - 30, (refractY + eyeY) / 2 - 6);
       ctx.restore();
     };
 
@@ -1107,7 +1135,7 @@ const Refraction = ({ hideNav = false }: { hideNav?: boolean }) => {
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [mode, angleDeg, n, thickness, animate, rays, stickAngleDeg, stickWaterN, stickSubmerged]);
+  }, [mode, angleDeg, n, thickness, animate, rays, stickAngleDeg, stickWaterN, stickSubmerged, lang]);
 
   // Slab values
   const theta1 = (angleDeg * Math.PI) / 180;
@@ -1161,8 +1189,8 @@ const Refraction = ({ hideNav = false }: { hideNav?: boolean }) => {
         <div className="ref-header">
           <div className="icon"><Microscope /></div>
           <div>
-            <h1 className="bn">আলোর প্রতিসরণ ও বিচ্ছুরণ</h1>
-            <p>Refraction & Dispersion</p>
+            <h1 className="bn">{t("আলোর প্রতিসরণ ও বিচ্ছুরণ", "Refraction & Dispersion of Light")}</h1>
+            <p>Refraction &amp; Dispersion</p>
           </div>
         </div>
 
@@ -1172,19 +1200,19 @@ const Refraction = ({ hideNav = false }: { hideNav?: boolean }) => {
               className={"tab-btn " + (mode === "slab" ? "active" : "")}
               onClick={() => { setMode("slab"); if (!hideNav) navigate(REF_MODE_TO_PATH.slab); }}
             >
-              কাঁচের স্ল্যাব
+              {t("কাঁচের স্ল্যাব", "Glass Slab")}
             </button>
             <button
               className={"tab-btn " + (mode === "prism" ? "active" : "")}
               onClick={() => { setMode("prism"); if (!hideNav) navigate(REF_MODE_TO_PATH.prism); }}
             >
-              প্রিজম (বিচ্ছুরণ)
+              {t("প্রিজম (বিচ্ছুরণ)", "Prism (Dispersion)")}
             </button>
             <button
               className={"tab-btn " + (mode === "stick" ? "active" : "")}
               onClick={() => { setMode("stick"); if (!hideNav) navigate(REF_MODE_TO_PATH.stick); }}
             >
-              পানিতে লাঠি বাঁকা
+              {t("পানিতে লাঠি বাঁকা", "Bent Stick in Water")}
             </button>
           </div>
         </div>
@@ -1208,7 +1236,7 @@ const Refraction = ({ hideNav = false }: { hideNav?: boolean }) => {
                   }}
                 >
                   {animate ? <Pause /> : <Play />}
-                  {animate ? "অ্যানিমেশন বন্ধ" : "অ্যানিমেশন চালু"}
+                  {animate ? t("অ্যানিমেশন বন্ধ", "Stop Animation") : t("অ্যানিমেশন চালু", "Start Animation")}
                 </button>
               </div>
             </div>
@@ -1217,17 +1245,17 @@ const Refraction = ({ hideNav = false }: { hideNav?: boolean }) => {
           <div className="experiment-controls" id="ref-controls">
             {mode === "slab" && (
               <div className="ref-card">
-                <div className="controls-title"><span>স্ল্যাব নিয়ন্ত্রণ</span></div>
+                <div className="controls-title"><span>{t("স্ল্যাব নিয়ন্ত্রণ", "Slab Control")}</span></div>
                 <div className="slider-row">
-                  <label><span>আপতন কোণ (i)</span><span className="val">{angleDeg}°</span></label>
+                  <label><span>{t("আপতন কোণ (i)", "Angle of Incidence (i)")}</span><span className="val">{angleDeg}°</span></label>
                   <input type="range" min={5} max={75} value={angleDeg} onChange={(e) => setAngleDeg(+e.target.value)} />
                 </div>
                 <div className="slider-row">
-                  <label><span>প্রতিসরাঙ্ক (n)</span><span className="val">{n.toFixed(2)}</span></label>
+                  <label><span>{t("প্রতিসরাঙ্ক (n)", "Refractive Index (n)")}</span><span className="val">{n.toFixed(2)}</span></label>
                   <input type="range" min={1.0} max={2.0} step={0.01} value={n} onChange={(e) => setN(+e.target.value)} />
                 </div>
                 <div className="slider-row">
-                  <label><span>স্ল্যাবের পুরুত্ব</span><span className="val">{thickness}px</span></label>
+                  <label><span>{t("স্ল্যাবের পুরুত্ব", "Slab Thickness")}</span><span className="val">{thickness}px</span></label>
                   <input type="range" min={40} max={180} value={thickness} onChange={(e) => setThickness(+e.target.value)} />
                 </div>
               </div>
@@ -1235,39 +1263,42 @@ const Refraction = ({ hideNav = false }: { hideNav?: boolean }) => {
             {mode === "prism" && (
               <div className="ref-card">
                 <div className="controls-title">
-                  <span>আলোক উৎস ({rays.length})</span>
+                  <span>{t("আলোক উৎস", "Light Source")} ({rays.length})</span>
                   <button
                     className="add-btn"
                     onClick={() => setPlacingRay((p) => !p)}
                     disabled={rays.length >= 6}
                     style={placingRay ? { background: "var(--success)", borderColor: "var(--success-dark)" } : undefined}
                   >
-                    <Plus /> {placingRay ? "ক্যানভাসে ক্লিক করুন" : "আলো যোগ"}
+                    <Plus /> {placingRay ? t("ক্যানভাসে ক্লিক করুন", "Click on Canvas") : t("আলো যোগ", "Add Light")}
                   </button>
                 </div>
                 <div style={{ fontSize: 11, color: "var(--gray-500)", marginBottom: 8 }}>
-                  "আলো যোগ" চাপুন, তারপর ক্যানভাসের যেকোনো জায়গায় ক্লিক করুন — সেখান থেকে আলো প্রিজমে গিয়ে পড়বে।
+                  {t(
+                    '"আলো যোগ" চাপুন, তারপর ক্যানভাসের যেকোনো জায়গায় ক্লিক করুন — সেখান থেকে আলো প্রিজমে গিয়ে পড়বে।',
+                    "Press Add Light, then click anywhere on the canvas — light will travel from there to the prism."
+                  )}
                 </div>
                 {rays.map((ray) => (
                   <div key={ray.id} className="ray-card">
                     <div className="ray-card-head">
                       <span className="ray-tag">
                         <span className="ray-dot" style={{ background: colorFor(ray.id), color: colorFor(ray.id) }} />
-                        উৎস R{ray.id}
+                        {t("উৎস", "Source")} R{ray.id}
                       </span>
                       <button className="del-btn" onClick={() => removeRay(ray.id)} aria-label="remove">
                         <Trash2 />
                       </button>
                     </div>
                     <div className="slider-row">
-                      <label><span>X অবস্থান</span><span className="val">{Math.round(ray.sx * 100)}%</span></label>
+                      <label><span>{t("X অবস্থান", "X Position")}</span><span className="val">{Math.round(ray.sx * 100)}%</span></label>
                       <input
                         type="range" min={0} max={1} step={0.01} value={ray.sx}
                         onChange={(e) => updateRay(ray.id, { sx: +e.target.value })}
                       />
                     </div>
                     <div className="slider-row">
-                      <label><span>Y অবস্থান</span><span className="val">{Math.round(ray.sy * 100)}%</span></label>
+                      <label><span>{t("Y অবস্থান", "Y Position")}</span><span className="val">{Math.round(ray.sy * 100)}%</span></label>
                       <input
                         type="range" min={0} max={1} step={0.01} value={ray.sy}
                         onChange={(e) => updateRay(ray.id, { sy: +e.target.value })}
@@ -1277,42 +1308,41 @@ const Refraction = ({ hideNav = false }: { hideNav?: boolean }) => {
                 ))}
                 {rays.length === 0 && (
                   <div style={{ fontSize: 12, color: "var(--gray-500)", padding: 12, textAlign: "center", border: "1px dashed var(--gray-300)", borderRadius: 8 }}>
-                    কোনো আলো নেই। উপরে "আলো যোগ" চাপুন।
+                    {t('কোনো আলো নেই। উপরে "আলো যোগ" চাপুন।', "No light. Press Add Light above.")}
                   </div>
                 )}
                 {rays.length >= 6 && (
                   <div style={{ fontSize: 11, color: "var(--gray-500)", marginTop: 4 }}>
-                    সর্বাধিক ৬টি আলো যোগ করা যাবে।
+                    {t("সর্বাধিক ৬টি আলো যোগ করা যাবে।", "Maximum 6 lights can be added.")}
                   </div>
                 )}
               </div>
             )}
             {mode === "stick" && (
               <div className="ref-card">
-                <div className="controls-title"><span>পর্যবেক্ষণ — পানিতে লাঠি</span></div>
+                <div className="controls-title"><span>{t("পর্যবেক্ষণ — পানিতে লাঠি", "Observation — Stick in Water")}</span></div>
                 <div className="slider-row">
-                  <label><span>লাঠির কোণ (উলম্ব থেকে)</span><span className="val">{stickAngleDeg}°</span></label>
+                  <label><span>{t("লাঠির কোণ (উলম্ব থেকে)", "Stick Angle (from vertical)")}</span><span className="val">{stickAngleDeg}°</span></label>
                   <input type="range" min={0} max={80} value={stickAngleDeg} onChange={(e) => setStickAngleDeg(+e.target.value)} />
                 </div>
                 <div className="slider-row">
-                  <label><span>পানির প্রতিসরাঙ্ক (n)</span><span className="val">{stickWaterN.toFixed(2)}</span></label>
+                  <label><span>{t("পানির প্রতিসরাঙ্ক (n)", "Water Refractive Index (n)")}</span><span className="val">{stickWaterN.toFixed(2)}</span></label>
                   <input type="range" min={1.0} max={1.8} step={0.01} value={stickWaterN} onChange={(e) => setStickWaterN(+e.target.value)} />
                 </div>
                 <div className="slider-row">
-                  <label><span>নিমজ্জিত দৈর্ঘ্য</span><span className="val">{stickSubmerged}px</span></label>
+                  <label><span>{t("নিমজ্জিত দৈর্ঘ্য", "Submerged Length")}</span><span className="val">{stickSubmerged}px</span></label>
                   <input type="range" min={60} max={240} value={stickSubmerged} onChange={(e) => setStickSubmerged(+e.target.value)} />
                 </div>
                 <div style={{ fontSize: 13, color: "var(--gray-700)", lineHeight: 1.7 }} className="bn">
-                  পানিতে আংশিক নিমজ্জিত একটি সোজা লাঠি বা কলম উপর থেকে দেখলে
-                  <b> বাঁকা </b> মনে হয়। কারণ পানি (ঘন মাধ্যম) থেকে আলো বাতাসে
-                  (হালকা মাধ্যম) আসার সময় অভিলম্ব থেকে দূরে সরে যায়, ফলে আমাদের চোখে
-                  লাঠির নিমজ্জিত অংশের <b>আপাত অবস্থান</b> প্রকৃত অবস্থানের চেয়ে
-                  অগভীর ও সরে যাওয়া দেখায়।
+                  {t(
+                    "পানিতে আংশিক নিমজ্জিত একটি সোজা লাঠি বা কলম উপর থেকে দেখলে বাঁকা মনে হয়। কারণ পানি (ঘন মাধ্যম) থেকে আলো বাতাসে (হালকা মাধ্যম) আসার সময় অভিলম্ব থেকে দূরে সরে যায়, ফলে আমাদের চোখে লাঠির নিমজ্জিত অংশের আপাত অবস্থান প্রকৃত অবস্থানের চেয়ে অগভীর ও সরে যাওয়া দেখায়।",
+                    "A straight stick or pen partially submerged in water appears bent when viewed from above. This is because light bends away from the normal when traveling from water (denser medium) to air (lighter medium), making the apparent position of the submerged part look shallower and displaced compared to its real position."
+                  )}
                 </div>
                 <div style={{ marginTop: 10, fontSize: 12, color: "var(--gray-500)" }} className="bn">
-                  <div>• কমলা কঠিন রেখা — আমরা যা <b>দেখি</b> (আপাত)</div>
-                  <div>• বাদামি ড্যাশড রেখা — লাঠির <b>প্রকৃত</b> অবস্থান</div>
-                  <div>• হলুদ রেখা — আলোক রশ্মির পথ (পৃষ্ঠে বেঁকেছে)</div>
+                  <div>• {t("কমলা কঠিন রেখা — আমরা যা", "Orange solid line — what we")} <b>{t("দেখি", "see")}</b> {t("(আপাত)", "(apparent)")}</div>
+                  <div>• {t("বাদামি ড্যাশড রেখা — লাঠির", "Brown dashed line — the stick's")} <b>{t("প্রকৃত", "real")}</b> {t("অবস্থান", "position")}</div>
+                  <div>• {t("হলুদ রেখা — আলোক রশ্মির পথ (পৃষ্ঠে বেঁকেছে)", "Yellow line — path of light ray (bent at surface)")}</div>
                 </div>
               </div>
             )}
@@ -1322,7 +1352,7 @@ const Refraction = ({ hideNav = false }: { hideNav?: boolean }) => {
         {/* SLAB FORMULA + DATA */}
         {mode === "slab" && (
           <div className="ref-card formula-card">
-            <div className="section-title bn">সূত্র ও গণনা — কাঁচের স্ল্যাব</div>
+            <div className="section-title bn">{t("সূত্র ও গণনা — কাঁচের স্ল্যাব", "Formula & Calculation — Glass Slab")}</div>
             <div className="formula-display">
               <span className="math">n<span className="math-sub">1</span></span>
               <span className="op">·</span>
@@ -1334,16 +1364,16 @@ const Refraction = ({ hideNav = false }: { hideNav?: boolean }) => {
             </div>
             <div className="data-rows">
               <div className="data-row">
-                <span className="k">স্নেলের সূত্র</span>
+                <span className="k">{t("স্নেলের সূত্র", "Snell's Law")}</span>
                 <span className="v bn">
                   <span className="math">n<span className="math-sub">1</span> sin(i) = n<span className="math-sub">2</span> sin(r)</span>
                 </span>
               </div>
-              <div className="data-row"><span className="k">আপতন কোণ (i)</span><span className="v">{angleDeg}°</span></div>
-              <div className="data-row"><span className="k">প্রতিসরণ কোণ (r)</span><span className="v">{rDeg.toFixed(2)}°</span></div>
-              <div className="data-row"><span className="k">প্রতিসরাঙ্ক (n)</span><span className="v">{n.toFixed(2)}</span></div>
+              <div className="data-row"><span className="k">{t("আপতন কোণ (i)", "Angle of Incidence (i)")}</span><span className="v">{angleDeg}°</span></div>
+              <div className="data-row"><span className="k">{t("প্রতিসরণ কোণ (r)", "Angle of Refraction (r)")}</span><span className="v">{rDeg.toFixed(2)}°</span></div>
+              <div className="data-row"><span className="k">{t("প্রতিসরাঙ্ক (n)", "Refractive Index (n)")}</span><span className="v">{n.toFixed(2)}</span></div>
               <div className="data-row">
-                <span className="k">পার্শ্বিক সরণ (d)</span>
+                <span className="k">{t("পার্শ্বিক সরণ (d)", "Lateral Displacement (d)")}</span>
                 <span className="v">
                   <span className="math">d = </span>
                   <div className="math-frac">
@@ -1353,7 +1383,7 @@ const Refraction = ({ hideNav = false }: { hideNav?: boolean }) => {
                 </span>
               </div>
               <div className="data-row">
-                <span className="k">গণনা</span>
+                <span className="k">{t("গণনা", "Calculation")}</span>
                 <span className="v">
                   <span className="math">{thickness} · </span>
                   <div className="math-frac">
@@ -1371,7 +1401,7 @@ const Refraction = ({ hideNav = false }: { hideNav?: boolean }) => {
         {mode === "prism" && (
           <>
             <div className="ref-card formula-card">
-              <div className="section-title bn">সূত্র — প্রিজম বিচ্ছুরণ</div>
+              <div className="section-title bn">{t("সূত্র — প্রিজম বিচ্ছুরণ", "Formula — Prism Dispersion")}</div>
               <div className="formula-display">
                 <div className="math-frac">
                   <span className="num">sin(i)</span>
@@ -1383,20 +1413,20 @@ const Refraction = ({ hideNav = false }: { hideNav?: boolean }) => {
                 <span className="math">δ = (i<span className="math-sub">1</span> + i<span className="math-sub">2</span>) − A</span>
               </div>
               <div className="data-rows">
-                <div className="data-row"><span className="k">প্রিজম কোণ (A)</span><span className="v">60°</span></div>
-                <div className="data-row"><span className="k">মোট রশ্মি</span><span className="v">{rays.length}</span></div>
-                <div className="data-row"><span className="k">নিয়ম</span><span className="v bn">বেগুনি বেশি বাঁকে · লাল কম বাঁকে</span></div>
+                <div className="data-row"><span className="k">{t("প্রিজম কোণ (A)", "Prism Angle (A)")}</span><span className="v">60°</span></div>
+                <div className="data-row"><span className="k">{t("মোট রশ্মি", "Total Rays")}</span><span className="v">{rays.length}</span></div>
+                <div className="data-row"><span className="k">{t("নিয়ম", "Rule")}</span><span className="v bn">{t("বেগুনি বেশি বাঁকে · লাল কম বাঁকে", "Violet bends more · Red bends less")}</span></div>
               </div>
             </div>
 
             <div className="ref-card">
-              <div className="section-title bn">প্রতিটি রশ্মির বিচ্ছুরণ গণনা</div>
+              <div className="section-title bn">{t("প্রতিটি রশ্মির বিচ্ছুরণ গণনা", "Dispersion Calculation per Ray")}</div>
               <div className="calc-grid">
                 {rayResults.map((res) => (
                   <div key={res.id} className="calc-block">
                     <div className="calc-block-head">
                       <span className="ray-dot" style={{ background: colorFor(res.id), color: colorFor(res.id) }} />
-                      <span>রশ্মি R{res.id}</span>
+                      <span>{t("রশ্মি", "Ray")} R{res.id}</span>
                       <span style={{ marginLeft: "auto", color: "var(--gray-500)", fontWeight: 700 }}>
                         <span className="math">i ≈ {res.theta_i.toFixed(1)}°</span>
                       </span>
@@ -1404,7 +1434,7 @@ const Refraction = ({ hideNav = false }: { hideNav?: boolean }) => {
                     {SPECTRUM.map((c, i) => (
                       <div key={c.en} className="spectrum-row">
                         <div className="spectrum-swatch" style={{ background: c.color }} />
-                        <span className="spectrum-name bn">{c.name}</span>
+                        <span className="spectrum-name bn">{lang === "en" ? c.en : c.name}</span>
                         <span className="spectrum-n">n = {c.n.toFixed(3)}</span>
                         <span className="spectrum-dev">
                           <span className="math">δ = {Number.isFinite(res.deviations[i]) ? `${res.deviations[i].toFixed(1)}°` : "—"}</span>
@@ -1421,22 +1451,22 @@ const Refraction = ({ hideNav = false }: { hideNav?: boolean }) => {
         {/* STICK FORMULA */}
         {mode === "stick" && (
           <div className="ref-card formula-card">
-            <div className="section-title bn">সূত্র ও গণনা — পানিতে লাঠি</div>
+            <div className="section-title bn">{t("সূত্র ও গণনা — পানিতে লাঠি", "Formula & Calculation — Stick in Water")}</div>
             <div className="formula-display">
               <span className="math">n = </span>
               <div className="math-frac">
-                <span className="num">প্রকৃত গভীরতা (Real Depth)</span>
-                <span className="den">আপাত গভীরতা (Apparent Depth)</span>
+                <span className="num">{t("প্রকৃত গভীরতা", "Real Depth")} (Real Depth)</span>
+                <span className="den">{t("আপাত গভীরতা", "Apparent Depth")} (Apparent Depth)</span>
               </div>
             </div>
             <div className="data-rows">
-              <div className="data-row"><span className="k">পানির প্রতিসরাঙ্ক (n)</span><span className="v">{stickWaterN.toFixed(2)}</span></div>
+              <div className="data-row"><span className="k">{t("পানির প্রতিসরাঙ্ক (n)", "Water Refractive Index (n)")}</span><span className="v">{stickWaterN.toFixed(2)}</span></div>
               <div className="data-row">
-                <span className="k">প্রকৃত গভীরতা</span>
+                <span className="k">{t("প্রকৃত গভীরতা", "Real Depth")}</span>
                 <span className="v">{stickSubmerged} px</span>
               </div>
               <div className="data-row">
-                <span className="k">আপাত গভীরতা</span>
+                <span className="k">{t("আপাত গভীরতা", "Apparent Depth")}</span>
                 <span className="v">
                   <div className="math-frac">
                     <span className="num">{stickSubmerged} px</span>
@@ -1456,14 +1486,14 @@ const Refraction = ({ hideNav = false }: { hideNav?: boolean }) => {
             <div className="ref-card learning-outcomes-section">
               <div className="learning-header">
                 <div className="learning-icon"><Lightbulb size={18} /></div>
-                <div className="learning-title bn">এই উপকরণ সম্পর্কে শিখুন:</div>
+                <div className="learning-title bn">{t("এই উপকরণ সম্পর্কে শিখুন:", "Learn about this material:")}</div>
               </div>
-              <p className="learning-message bn">{outcome.message}</p>
+              <p className="learning-message bn">{t(outcome.message, outcome.messageEn)}</p>
               <div className="learning-tips-grid">
                 {outcome.tips.map((tip, i) => (
                   <div key={i} className="learning-tip-item bn">
                     <div className="tip-icon">{i + 1}</div>
-                    <div className="tip-text">{tip}</div>
+                    <div className="tip-text">{t(tip, outcome.tipsEn[i])}</div>
                   </div>
                 ))}
               </div>
@@ -1477,30 +1507,30 @@ const Refraction = ({ hideNav = false }: { hideNav?: boolean }) => {
             <Info />
             <div className="explain-title bn">
               {mode === "slab"
-                ? "কেন আলো বাঁকা পথে চলে?"
+                ? t("কেন আলো বাঁকা পথে চলে?", "Why does light travel in a bent path?")
                 : mode === "prism"
-                ? "কেন বিচ্ছুরণ ঘটে?"
-                : "পানিতে লাঠি বাঁকা দেখায় কেন?"}
+                ? t("কেন বিচ্ছুরণ ঘটে?", "Why does dispersion occur?")
+                : t("পানিতে লাঠি বাঁকা দেখায় কেন?", "Why does a stick in water appear bent?")}
             </div>
           </div>
           <div className="explain-body bn">
             {mode === "slab" && (
-              <>কাঁচের প্রতিসরাঙ্ক বাতাসের চেয়ে বেশি, তাই আলো কাঁচে ঢোকার সময় অভিলম্বের
-              দিকে এবং বের হওয়ার সময় অভিলম্ব থেকে দূরে বাঁকে। দুই পৃষ্ঠ সমান্তরাল হওয়ায়
-              বের হওয়া রশ্মি আপতন রশ্মির সমান্তরাল থাকে, কিন্তু কিছুটা পার্শ্বিক সরণ ঘটে।</>
+              t(
+                "কাঁচের প্রতিসরাঙ্ক বাতাসের চেয়ে বেশি, তাই আলো কাঁচে ঢোকার সময় অভিলম্বের দিকে এবং বের হওয়ার সময় অভিলম্ব থেকে দূরে বাঁকে। দুই পৃষ্ঠ সমান্তরাল হওয়ায় বের হওয়া রশ্মি আপতন রশ্মির সমান্তরাল থাকে, কিন্তু কিছুটা পার্শ্বিক সরণ ঘটে।",
+                "Glass has a higher refractive index than air, so light bends toward the normal when entering the glass and away from the normal when exiting. Because the two surfaces are parallel, the exiting ray remains parallel to the incident ray, but with a slight lateral displacement."
+              )
             )}
             {mode === "prism" && (
-              <>বিভিন্ন রঙের আলোর তরঙ্গদৈর্ঘ্য আলাদা, ফলে কাঁচে তাদের প্রতিসরাঙ্ক (n) আলাদা।
-              বেগুনি আলোর n সবচেয়ে বেশি, তাই এটি সবচেয়ে বেশি বাঁকে; লাল আলোর n সবচেয়ে কম,
-              তাই এটি সবচেয়ে কম বাঁকে। এখানে একাধিক রশ্মি যোগ করে প্রতিটির আলাদা বিচ্ছুরণ পর্যবেক্ষণ করা যায়।</>
+              t(
+                "বিভিন্ন রঙের আলোর তরঙ্গদৈর্ঘ্য আলাদা, ফলে কাঁচে তাদের প্রতিসরাঙ্ক (n) আলাদা। বেগুনি আলোর n সবচেয়ে বেশি, তাই এটি সবচেয়ে বেশি বাঁকে; লাল আলোর n সবচেয়ে কম, তাই এটি সবচেয়ে কম বাঁকে। এখানে একাধিক রশ্মি যোগ করে প্রতিটির আলাদা বিচ্ছুরণ পর্যবেক্ষণ করা যায়।",
+                "Different colors of light have different wavelengths, so they have different refractive indices (n) in glass. Violet light has the highest n and bends the most; red light has the lowest n and bends the least. You can add multiple rays here to observe the separate dispersion of each."
+              )
             )}
             {mode === "stick" && (
-              <>পানিতে আংশিক নিমজ্জিত একটি সোজা লাঠি বা কলম উপর থেকে দেখলে বাঁকা
-              মনে হয়, কারণ পানি (ঘন মাধ্যম) থেকে আলো বাতাসে (হালকা মাধ্যম) আসার
-              সময় অভিলম্ব থেকে দূরে সরে যায়। লাঠির নিমজ্জিত প্রান্ত থেকে আসা আলো
-              পানির পৃষ্ঠে প্রতিসরিত হয়ে চোখে পৌঁছায়; কিন্তু মস্তিষ্ক ধরে নেয় আলো
-              সরলরেখায় এসেছে, তাই লাঠির নিমজ্জিত অংশ প্রকৃত অবস্থানের চেয়ে
-              উপরে ও সরে গিয়ে দেখা যায় — ফলে লাঠিটিকে পৃষ্ঠের কাছে বাঁকা দেখায়।</>
+              t(
+                "পানিতে আংশিক নিমজ্জিত একটি সোজা লাঠি বা কলম উপর থেকে দেখলে বাঁকা মনে হয়, কারণ পানি (ঘন মাধ্যম) থেকে আলো বাতাসে (হালকা মাধ্যম) আসার সময় অভিলম্ব থেকে দূরে সরে যায়। লাঠির নিমজ্জিত প্রান্ত থেকে আসা আলো পানির পৃষ্ঠে প্রতিসরিত হয়ে চোখে পৌঁছায়; কিন্তু মস্তিষ্ক ধরে নেয় আলো সরলরেখায় এসেছে, তাই লাঠির নিমজ্জিত অংশ প্রকৃত অবস্থানের চেয়ে উপরে ও সরে গিয়ে দেখা যায় — ফলে লাঠিটিকে পৃষ্ঠের কাছে বাঁকা দেখায়।",
+                "A straight stick or pen partially submerged in water appears bent when viewed from above because light bends away from the normal when traveling from water (denser medium) to air (lighter medium). Light from the submerged tip refracts at the water surface before reaching the eye; but the brain assumes light traveled in a straight line, so the submerged part appears higher and displaced from its real position — making the stick appear bent near the surface."
+              )
             )}
           </div>
         </div>
