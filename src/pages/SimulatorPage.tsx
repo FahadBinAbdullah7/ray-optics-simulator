@@ -356,7 +356,7 @@ const SimulatorPage = () => {
       )}
 
       <header className="central-header">
-        <img src="/logo.png" alt="10 Minute School" className="header-logo" />
+        <img src="https://cdn.10minuteschool.com/images/svg/Origin%20Labs%20Black.svg" alt="10 Minute School" className="header-logo" />
         <div className="header-right">
           {/* Language toggle */}
           <div className="lang-toggle" role="group" aria-label="Language">
